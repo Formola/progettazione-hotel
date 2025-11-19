@@ -1,0 +1,53 @@
+@startuml component_diagram_clean
+left to right direction
+skinparam componentStyle uml2
+
+' ==========================
+' COMPONENTI PRINCIPALI
+' ==========================
+[Application API]<<component>>
+[Service]<<component>>
+
+' ==========================
+' INTERFACCIA REPOSITORY/STORAGE
+' ==========================
+() "IPropertyRepository" as IPropRepo
+() "IRoomRepository" as IRoomRepo
+() "IMediaRepository" as IMediaRepo
+() "IMediaStorage" as IMediaStorage
+() "IAuthProvider" as IAuthProvider
+
+' ==========================
+' IMPLEMENTAZIONI CONCRETE
+' ==========================
+[Repository]<<component>>
+[Storage]<<component>>
+
+[Auth]<<component>> 
+
+' ==========================
+' RELAZIONE TRA API E SERVICE
+' ==========================
+[Application API] ..> [Service] : <<REST call>>
+
+' ==========================
+' RELAZIONE SERVICE → INTERFACCE
+' ==========================
+[Service] ..> IPropRepo
+[Service] ..> IRoomRepo
+[Service] ..> IMediaRepo
+[Service] ..> IMediaStorage
+[Service] ..> IAuthProvider
+
+' ==========================
+' RELAZIONE INTERFACCIA → IMPLEMENTAZIONE
+' ==========================
+[Repository] -up- IPropRepo
+[Repository] -up- IRoomRepo
+[Repository] -up- IMediaRepo
+
+[Storage] -up- IMediaStorage
+
+[Auth] -up- IAuthProvider
+
+@enduml

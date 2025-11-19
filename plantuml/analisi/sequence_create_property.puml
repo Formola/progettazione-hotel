@@ -1,0 +1,33 @@
+@startuml sequence_create_property
+actor PropertyOwner
+
+participant PropertyOwner
+participant Property
+participant Room
+participant Media
+
+' Creazione nuova proprietà
+PropertyOwner -> Property: addProperty()
+activate Property
+
+Property -> Property: updateProperty()
+Property --> PropertyOwner: propertyCreated
+
+' Gestione stanze inclusa (Add Room/Edit Room)
+PropertyOwner -> Room: addRoom()
+activate Room
+Room -> Room: updateRoom()
+Room --> PropertyOwner: roomCreated
+
+' Upload media associati alla proprietà
+PropertyOwner -> Media: upload()
+activate Media
+Media --> PropertyOwner: mediaSaved
+
+' Visualizzazione proprietà
+PropertyOwner -> PropertyOwner: viewProperties()
+deactivate Property
+deactivate Room
+deactivate Media
+
+@enduml

@@ -1,0 +1,40 @@
+@startuml sequence_delete_property
+actor PropertyOwner
+
+participant PropertyOwner
+participant Property
+participant Room
+participant Media
+
+' Inizio delete property
+PropertyOwner -> Property: deleteProperty()
+activate Property
+
+' Eliminazione media associati alla property
+loop For each media of property
+    Property -> Media: deleteMedia()
+    activate Media
+    Media --> Property: deleted
+    deactivate Media
+end
+
+' Eliminazione stanze associate e dei loro media
+loop For each room of property
+    Property -> Room: deleteRoom()
+    activate Room
+
+    loop For each media of room
+        Room -> Media: deleteMedia()
+        activate Media
+        Media --> Room: deleted
+        deactivate Media
+    end
+
+    Room --> Property: roomDeleted
+    deactivate Room
+end
+
+' Eliminazione della property stessa
+Property --> PropertyOwner: propertyDeleted
+deactivate Property
+@enduml

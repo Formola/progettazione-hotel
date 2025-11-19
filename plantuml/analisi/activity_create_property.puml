@@ -1,0 +1,48 @@
+
+@startuml activity_create_property
+title Activity Diagram – Create New Property
+
+|Property Owner|
+start
+:Start the procedure to create a new property;
+:Enter property details (name, address, description, amenities, etc.);
+:Confirm the entered data;
+
+|System|
+:Validate property data;
+if (Data valid?) then (Yes)
+  :Create the new property in the system;
+else (No)
+  :Show error message;
+  stop
+endif
+
+|Property Owner|
+:Decide whether to add rooms to the property;
+
+if (Add rooms?) then (Yes)
+  repeat
+    :Enter room details (type, price, capacity, amenities, availability);
+    |System|
+    :Create a new room associated with the property;
+  repeat while (Add more rooms?)
+endif
+
+|Property Owner|
+:Decide whether to upload media (photos, videos);
+
+if (Upload media?) then (Yes)
+  repeat
+    :Select media file;
+    |System|
+    :Upload and associate media with the property;
+  repeat while (Upload more media?)
+endif
+
+|System|
+:Confirm creation of the complete property;
+
+|Property Owner|
+:View the new property in their property list;
+stop
+@enduml

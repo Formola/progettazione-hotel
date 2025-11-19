@@ -1,0 +1,64 @@
+@startuml class_analysis
+left to right direction
+skinparam classAttributeIconSize 0
+
+class User {
+    +name
+    +email
+    +login()
+    +logout()
+    +register()
+}
+
+class PropertyOwner {
+    +paymentInfo
+    +addProperty()
+    +updateProperty()
+    +deleteProperty()
+    +viewProperties()
+}
+
+class Customer {
+    +preferences
+    +searchProperties()
+    +filterProperties()
+    +viewPropertyDetails()
+}
+
+User <|-- PropertyOwner
+User <|-- Customer
+
+class Property {
+    +name
+    +address
+    +description
+    +propertyAmenities
+    +updateDetails()
+    +generateSnapshot()
+}
+
+class Room {
+    +type
+    +price
+    +capacity
+    +roomAmenities
+    +availability
+    +updateDetails()
+}
+
+class Media {
+    +filePath
+    +mediaType
+    +description
+    +upload()
+    +delete()
+}
+
+PropertyOwner "1" --> "*" Property : owns
+Property "1" *-- "*" Room : contains
+Property "1" *-- "*" Media : has
+Room "1" *-- "*" Media : has
+
+Customer --> "*" Property : views
+
+@enduml

@@ -1,0 +1,43 @@
+@startuml   sequence_update_property
+actor PropertyOwner
+
+participant PropertyOwner
+participant Property
+participant Room
+participant Media
+
+' Modifica proprietà esistente
+PropertyOwner -> Property: updateProperty()
+activate Property
+
+alt Dati validi
+    Property --> PropertyOwner: propertyUpdated
+else Dati non validi
+    Property -> PropertyOwner: showError()
+end
+
+opt Gestione Stanze (Add/Edit/Delete)
+    PropertyOwner -> Room: updateRoom()
+    activate Room
+    alt Dati validi
+        Room --> PropertyOwner: roomUpdated
+    else Dati non validi
+        Room -> PropertyOwner: showRoomError()
+    end
+    deactivate Room
+end
+
+opt Upload nuovi media
+    PropertyOwner -> Media: upload()
+    activate Media
+    alt File valido
+        Media --> PropertyOwner: mediaSaved
+    else File non valido o troppo grande
+        Media --> PropertyOwner: showMediaError()
+    end
+    deactivate Media
+end
+
+PropertyOwner -> PropertyOwner: viewProperties()
+deactivate Property
+@enduml

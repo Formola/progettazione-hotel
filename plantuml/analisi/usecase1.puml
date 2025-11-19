@@ -1,0 +1,87 @@
+    @startuml usecase1
+    left to right direction
+    skinparam packageStyle rectangle
+
+    ' Actors
+    actor "User" as User
+    actor "Customer" as Customer
+    actor "Property Owner" as Owner
+    actor "Authenticated User" as AuthUser
+
+    ' Actor hierarchy
+    User <|-- Customer
+    User <|-- Owner
+    Customer <|-- AuthUser
+    Owner <|-- AuthUser
+
+    ' Authentication package
+    package "Authentication" {
+        (SignUp)
+        (Login)
+        (Logout)
+        (Enter Personal Data)
+    }
+
+    ' Property Management package
+    package "Property Management" {
+        (Create New Property)
+        (Update Existing Property)
+        (Delete Property)
+        (View Property List)
+        (Manage Rooms)
+        (Upload Media)
+    }
+
+    ' Room Management package
+    package "Room Management" {
+        (Add Room)
+        (Edit Room)
+        (Delete Room)
+    }
+
+    ' Property Search package
+    package "Property Search" {
+        (Search Property)
+        (View Property Details)
+        (Filter Results)
+    }
+
+    ' Relations: Authentication
+    User --> (SignUp)
+    User --> (Login)
+    AuthUser --> (Logout)
+
+    (SignUp) ..> (Enter Personal Data) : <<include>>
+
+    ' Relations: Property Management (only Authenticated Owner)
+    AuthUser --> (View Property List)
+    AuthUser --> (Create New Property)
+    AuthUser --> (Update Existing Property)
+
+    (Create New Property) ..> (Manage Rooms) : <<include>>
+    (Create New Property) ..> (Upload Media) : <<extend>>
+
+    (Update Existing Property) ..> (Delete Property) : <<extend>>
+    (Update Existing Property) ..> (Manage Rooms) : <<include>>
+    (Update Existing Property) ..> (Upload Media) : <<extend>>
+
+
+    (Manage Rooms) ..> (Add Room) : <<include>>
+    (Manage Rooms) ..> (Edit Room) : <<include>>
+    (Manage Rooms) ..> (Delete Room) : <<include>>
+
+    ' Relations: Property Search (all users can search)
+    User --> (Search Property)
+    ' Authenticated users can also search
+    AuthUser --> (Search Property)
+
+    (Search Property) ..> (View Property Details) : <<include>>
+    (Search Property) ..> (Filter Results) : <<extend>>
+
+    ' Note: Booking not modeled
+    note right of Customer
+    Customers may eventually book properties, 
+    but booking is not modeled in this diagram.
+    end note
+
+    @enduml

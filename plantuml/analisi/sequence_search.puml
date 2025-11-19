@@ -1,0 +1,38 @@
+@startuml sequence_search
+actor User
+
+participant Property
+participant Room
+participant Media
+
+' Ricerca proprietà
+User -> Property: searchProperties(criteria)
+activate Property
+
+' Ciclo per ogni proprietà trovata
+loop For each property in results
+    Property -> Property: getRooms()
+    activate Property
+    loop For each room in rooms
+        Property -> Room: getRoomDetails()
+        activate Room
+        Room --> Property: roomDetails
+        deactivate Room
+    end
+
+    Property -> Property: getPropertyMedia()
+    activate Property
+    loop For each media in media
+        Property -> Media: getMediaDetails()
+        activate Media
+        Media --> Property: mediaDetails
+        deactivate Media
+    end
+
+    Property --> User: propertyDetails
+    deactivate Property
+end
+
+deactivate Property
+@enduml
+    

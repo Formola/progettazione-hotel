@@ -1,0 +1,55 @@
+@startuml PackageDiagramDesign
+skinparam packageStyle rectangle
+left to right direction
+
+package "Presentation Layer" {
+  class PropertyAPI
+  class RoomAPI
+  class MediaAPI
+  class SearchAPI
+  class AuthAPI
+  class PropertyData
+  class RoomData
+  class MediaData
+  class UserData
+  class Response
+}
+
+
+package "Service Layer" {
+  class PropertyService
+  class RoomService
+  class MediaManager
+  class AuthService
+  class SearchService
+}
+
+package "Domain Layer" {
+  class Property
+  class Room
+  class Media
+  class PropertyBuilder
+  class ValidatorContext
+  abstract class AmenityFactory
+  interface IAmenity
+  class PropertyAmenity
+  class RoomAmenity
+}
+
+package "Repository & Storage Layer" {
+  interface IPropertyRepository
+  interface IRoomRepository
+  interface IMediaRepository
+  interface IMediaStorage
+  interface IAuthProvider
+  class PropertyRepositoryImpl
+  class S3MediaStorage
+  class AWSCognitoAuthProvider
+}
+
+"Presentation Layer" ..> "Service Layer"
+"Service Layer" ..> "Domain Layer"
+"Service Layer" ..> "Repository & Storage Layer"
+"PropertyAmenity" ..|> "IAmenity"
+"RoomAmenity" ..|> "IAmenity"
+@enduml

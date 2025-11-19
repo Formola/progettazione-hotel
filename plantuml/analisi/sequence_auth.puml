@@ -1,0 +1,31 @@
+@startuml sequence_auth
+actor UserActor as UA
+participant User as U
+
+' Signup
+UA -> U: signup()
+activate U
+U -> U: enterPersonalData()
+alt Data valid
+    U --> UA: registration confirmed
+else Data invalid
+    U --> UA: request correction
+end
+deactivate U
+
+' Login
+UA -> U: login()
+activate U
+alt Credentials valid
+    U --> UA: authentication success
+else Credentials invalid
+    U --> UA: show error / retry
+end
+deactivate U
+
+' Logout
+UA -> U: logout()
+activate U
+U --> UA: session terminated
+deactivate U
+@enduml

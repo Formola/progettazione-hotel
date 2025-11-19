@@ -1,0 +1,27 @@
+
+services:
+  localstack:
+    container_name: localstack_main
+    image: localstack/localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3,ec2,elb,autoscaling,cloudwatch,rds,apigateway,cognito-idp,iam,route53,sts,sns
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "./volume:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  # DB Postgres Reale (Alpine per velocità)
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: local_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppassword
+      POSTGRES_DB: appdb
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
