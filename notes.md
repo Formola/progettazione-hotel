@@ -772,9 +772,36 @@ Le **validazioni (nell'API layer)** controllano il formato e i tipi dei dati in 
 Le **validazioni di business** (nel Service/Domain) applicano invece le regole logiche dell’app (es. non puoi pubblicare una property senza stanze).
 Dividere i due livelli di validazione rende il codice più chiaro e facilita il debugging.
 
-**TODO** spiegare API GATEWAY pattern microservizi
 
-https://www.geeksforgeeks.org/system-design/microservices-design-patterns/
+### **Pattern a Microservizi: API Gateway**
+
+API significa "Application Programming Interface" ed è un insieme di regole e protocolli che consente a diverse applicazioni di comunicare tra loro. Di solito le api si utilizzano per connetterci a altri servizi esterni o applicazioni web (scambiando anche dati in formati standard come JSON o XML).
+
+**Il Pattern API Gateway** è un modello architetturale che funge da **punto unico di ingresso** per tutte le richieste provenienti dai client verso un insieme di microservizi. Talvolta viene chiamato anche **“Backend for Frontend”**, perché rappresenta il canale attraverso cui le applicazioni client comunicano con il backend, semplificando l’interazione con servizi multipli. In pratica, l’API Gateway **agisce come intermediario tra client e microservizi**, instradando le richieste ai servizi appropriati, gestendo l’autenticazione e l’autorizzazione, aggregando risposte provenienti da più servizi e proteggendo il sistema da eventuali attacchi.
+
+Il **funzionamento lato client** è semplice: le richieste partono dal client verso l’API Gateway, che decide dove inoltrarle, aggrega i risultati se necessario e restituisce una risposta coerente. Questo permette ai client di **interagire con un unico punto**, senza preoccuparsi della complessità interna dei microservizi o dei protocolli diversi tra loro.
+
+L’**architettura tipica** dell’API Gateway si articola in due livelli principali. Il **livello comune** gestisce funzioni di edge, come autenticazione e sicurezza di base, mentre il **livello API** è composto da moduli indipendenti, ciascuno dedicato a gestire uno specifico endpoint o gruppo di funzionalità per i client.
+
+<center>
+    <img src="./img/api_gateway_1.png" alt="Architettura Cloud" width="800"/>
+</center>
+
+Uno dei principali vantaggi di questo pattern è che **nasconde la complessità interna dei microservizi**, permettendo loro di evolvere senza impattare le applicazioni client. L’API Gateway riduce anche la **chattiness** tra client e backend, aggregando richieste multiple in una singola risposta e semplificando così la comunicazione. Inoltre, gestisce le **cross-cutting concerns**, ossia funzionalità trasversali come autenticazione, caching, discovery dei servizi, load balancing, rate limiting, circuit breaker, logging, tracciamento e trasformazioni di headers o query string. Centralizzando queste responsabilità, l’API Gateway aumenta la sicurezza e l’efficienza del sistema, e semplifica la manutenzione.
+
+<center>
+    <img src="./img/api_gateway_2.png" alt="Architettura Cloud" width="800"/>
+</center>
+
+Dal punto di vista tecnico, l’API Gateway funge da **reverse proxy** e implementa il **gateway routing**, utilizzando tipicamente l’HTTP routing per indirizzare le richieste ai microservizi corretti. Questo approccio **decoupla completamente i client dai servizi interni**, consentendo modifiche o evoluzioni del backend senza dover aggiornare i client. Reverse proxy significa che l’API Gateway riceve le richieste dai client e le inoltra ai server interni, nascondendo la struttura e la complessità del backend.
+
+Un’altra funzionalità chiave è l’**aggregazione delle richieste**, che consente al client di inviare una sola richiesta e ottenere un’unica risposta anche se i dati provengono da più microservizi. In questo modo, le interazioni diventano più efficienti e riducono la complessità lato client.
+
+
+Nel nostro caso, **l’API Gateway funge da punto centrale attraverso cui tutte le richieste dei client** (frontend web o mobile) arrivano ai microservizi dell’applicazione. Tutte le chiamate verso i servizi di gestione delle **proprietà, stanze, media, utenti e ricerca** passano dal gateway, che si occupa di instradare correttamente ogni richiesta al microservizio corrispondente.
+
+Inoltre, il gateway gestisce le **autenticazioni e autorizzazioni**, quindi solo gli utenti validi possono accedere ai dati o modificare le risorse, e centralizza alcune funzionalità trasversali come la **composizione di dati da più microservizi** (ad esempio quando si visualizzano proprietà con stanze e media collegati), semplificando così il lavoro del client e mantenendo il backend modulare e indipendente.
+
 
 
 
