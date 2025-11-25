@@ -20,3 +20,8 @@ output "test_instance_id" {
 output "real_db_connection" {
   value = "postgres://appuser:apppassword@localhost:5432/appdb"
 }
+
+output "api_base_url" {
+  description = "URL Base del Gateway"
+  value       = "http://localhost:4566/restapis/${aws_api_gateway_rest_api.main.id}/dev/_user_request_/api"
+}

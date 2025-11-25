@@ -11,7 +11,7 @@ resource "aws_launch_template" "app_lt" {
     security_groups             = [aws_security_group.ec2_sg.id]
   }
 
-  user_data = base64encode("#!/bin/bash\necho 'Hello from LocalStack' > index.html")
+
 }
 
 # --- SEZIONE SCALE OUT (SOLO PRO / AWS REALE) ---
@@ -63,7 +63,7 @@ resource "aws_autoscaling_group" "app_asg" {
 # Creiamo una singola istanza manualmente per provare che la rete e i Security Group funzionano.
 resource "aws_instance" "test_instance" {
   ami           = "ami-0c55b159cbfafe1f0"
-  instance_type = "t2.micro"
+  instance_type = "m5.large"
   subnet_id     = aws_subnet.public.id # La mettiamo nella pubblica per testare facile
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
 

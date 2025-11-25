@@ -4,11 +4,17 @@ services:
     container_name: localstack_main
     image: localstack/localstack
     ports:
-      - "4566:4566"
+      - "127.0.0.1:4566:4566"            # LocalStack Gateway
+      - "127.0.0.1:4510-4559:4510-4559"  # external services port range
     environment:
+      # LocalStack configuration: https://docs.localstack.cloud/references/configuration/
+      - DEBUG=${DEBUG:-0}
       - SERVICES=s3,ec2,elb,autoscaling,cloudwatch,rds,apigateway,cognito-idp,iam,route53,sts,sns
       - DEBUG=1
       - DOCKER_HOST=unix:///var/run/docker.sock
+      - EXTRA_CORS_ALLOWED_ORIGINS=*
+      - DISABLE_CORS_CHECKS=1
+      - HOSTNAME_EXTERNAL=localhost.localstack.cloud
     volumes:
       - "./volume:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
@@ -25,3 +31,5 @@ services:
       POSTGRES_DB: appdb
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
+
+      
