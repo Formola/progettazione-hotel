@@ -950,3 +950,31 @@ L'architettura separa chiaramente lo storage, aderendo al **CDP Web Storage Patt
 1. **RDS/Aurora PostgreSQL:** Questo è il database relazionale gestito per i dati strutturati (ad esempio, profili utente, transazioni, configurazioni). **RDS/Aurora** offre **alta disponibilità**, **scalabilità** verticale e orizzontale (tramite repliche di lettura) e gestisce automaticamente backup e patch.
 2. **S3 Media Property e Room:** **Amazon S3 (Simple Storage Service)** è utilizzato per lo storage di oggetti non strutturati e statici, come i file multimediali. S3 offre **durabilità estrema** e una **scalabilità praticamente illimitata**, rendendolo la soluzione ideale per archiviare grandi volumi di dati come immagini e video, sgravando il database relazionale da questo compito.
 
+### **IaC LocalStack (Community version)**
+
+Vediamo cosa, della nostra architettura cloud basata su AWS, è possibile emulare con LocalStack Community Edition (gratuita) e cosa invece richiede la versione Pro (a pagamento).
+
+| Servizio | Tipo Supporto Community | Creabile/Testabile con Terraform | Note API Coverage |
+|----------|------------------------|------------------------|-------------------|
+| **Route 53 DNS** | ✅ Emulato parzialmente | ✅ Sì | Alcune API non implementate in localstack |
+| **CloudFront** | ❌ Solo Pro | ❌ No | Servizio CDN richiede Pro |
+| **ELB (Load Balancer)** | ❌ Solo Pro | ❌ No | Maggior parte API marcate "Pro" |
+| **Cognito** | ❌ Solo Pro | ❌ No | API Coverage mostra "Pro" |
+| **EC2** | 🟠 Mockato | 🟠 Sì (ma è finta) | API disponibili ma solo mock, non crea container/vm|
+| **CloudWatch** | ✅ Emulato base | ✅ Sì | Logs funzionanti, alcune API Pro |
+| **Autoscaling** | ❌ Solo Pro | ❌ No | API Coverage "Pro" |
+| **API Gateway** | ✅ REST (V1) Emulato | ✅ Sì (solo V1) | V1 in Community, V2 è Pro |
+| **RDS/Aurora** | ❌ Solo Pro | ❌ No | Database reali richiedono Pro |
+| **S3** | ✅ Emulato completamente | ✅ Sì | Completamente in Community |
+
+
+**EC2 (Elastic Compute Cloud)** - Le API EC2 sono disponibili in Community ma tutto è completamente mockato. La documentazione è esplicita: "Mock VM Manager - all resources are stored as in-memory representation. This only offers the CRUD capability. This is the default VM manager in LocalStack Community edition." Con Terraform è possibile creare `aws_instance`, `aws_security_group`, `aws_key_pair` e si riceveranno instance IDs validi. Le API rispondono correttamente. Ma c'è zero esecuzione reale: nessuna VM, nessun container, nessun SSH, nessun user data execution. Le istanze sono solo record JSON in memoria. Per un'architettura applicativa le EC2 risulteranno completamente inutilizzabili.
+
+**CloudWatch** - CloudWatch Logs è disponibile in Community con funzionalità base. È possibile creare log groups e streams, scrivere log entries. Le Lambda creano automaticamente log groups. Con Terraform si possono usare `aws_cloudwatch_log_group` e `aws_cloudwatch_log_stream` che funzioneranno. Tuttavia guardando l'API Coverage, molte operazioni avanzate sono Pro. Metric alarms base funzionano ma con limitazioni (no anomaly detection, no metric streams). CloudWatch può essere utilizzato per logging base ma non per monitoring avanzato.
+
+**Autoscaling** - La documentazione dichiara esplicitamente "LocalStack does not support the docker/libvirt VM manager for EC2. It only works with the mock VM manager." E nella API Coverage si trovano operazioni marcate Pro. Nella Community è possibile creare `aws_autoscaling_group` con Terraform e la risorsa verrà accettata, ma risulta completamente non funzionale. Siccome EC2 è mock, l'autoscaling aggiunge o rimuove solo record mock senza alcun comportamento reale. Non c'è scaling funzionante in Community, solo definizioni IaC che non eseguono nulla.
+
+**API Gateway** - LocalStack Community supporta solo REST API (V1) completamente. La documentazione è chiara: "LocalStack supports API Gateway V1 (REST API) in the Free plan, and API Gateway V2 (HTTP, Management and WebSocket API) in the Base plan." Con Terraform è possibile creare `aws_api_gateway_rest_api`, risorse, metodi, integrazioni e deployment. Le REST API create sono realmente invocabili e funzionanti. Le integrazioni Lambda AWS_PROXY funzionano. Ma se l'architettura usa HTTP API (V2) o WebSocket, queste sono Pro e non funzioneranno. È necessario verificare quale tipo di API Gateway viene utilizzato: se è REST API funziona, altrimenti no.
+
+**S3 (Simple Storage Service)** - S3 è completamente supportato in Community Edition. Tutte le operazioni principali nell'API Coverage sono disponibili senza badge Pro. È possibile creare bucket, caricare oggetti, configurare CORS, versioning, lifecycle policies. Con Terraform `aws_s3_bucket`, `aws_s3_object`, `aws_s3_bucket_policy` funzionano perfettamente. Lo storage è reale su filesystem locale. È possibile accedere ai file via HTTP. S3 è uno dei pochi servizPi pienamente funzionali in Community e può essere utilizzato senza limitazioni per storage di media properties e altri file statici.
+
