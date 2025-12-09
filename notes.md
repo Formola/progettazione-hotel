@@ -978,3 +978,19 @@ Vediamo cosa, della nostra architettura cloud basata su AWS, è possibile emular
 
 **S3 (Simple Storage Service)** - S3 è completamente supportato in Community Edition. Tutte le operazioni principali nell'API Coverage sono disponibili senza badge Pro. È possibile creare bucket, caricare oggetti, configurare CORS, versioning, lifecycle policies. Con Terraform `aws_s3_bucket`, `aws_s3_object`, `aws_s3_bucket_policy` funzionano perfettamente. Lo storage è reale su filesystem locale. È possibile accedere ai file via HTTP. S3 è uno dei pochi servizPi pienamente funzionali in Community e può essere utilizzato senza limitazioni per storage di media properties e altri file statici.
 
+
+**NOTA**: esistono due immagini/emulatori per localstack, che sono localstack community (free) e localstack-pro che richiede una licenza (a pagamento) o licenza studenti (a novembre localstack ha chiuso una partnership con github education per offrire localstack-pro gratuitamente agli studenti iscritti a github education). La versione pro offre molti più servizi aws **emulati** e con funzionalità complete rispetto alla versione community gratuita.
+
+Per utilizzare localstack-pro, è richiesto un **auth-token** che si ottiene una volta ottenuta la licenza. L'auth-token va inserito come variabile d'ambiente `LOCALSTACK_AUTH_TOKEN` prima di avviare localstack-pro (o passato in environment variables nel file docker-compose.yml da file .env).
+
+#### Persistence in Localstack
+
+PERSISTENCE=1 in docker-compose.yml permette di salvare i dati in un volume. In questo modo, anche se si ferma e riavvia localstack, i dati (es. bucket S3, oggetti, configurazioni) rimangono intatti (include anche le risorse create via Terraform). 
+
+**NOTA**: la persistenza non riguarda i container con le ec2, se si spegne docker e si riavvia localstack, con la persistenza si salva solo lo state della ec2 (LocalStack ricarica solo i record EC2 (ID istanza, stato, metadati) dai file di stato), ma è fake perchè i container non ripartono.
+
+**Please note that this VM manager does not fully support persistence. While the records of resources will be persisted, the instances or AMIs themselves (i.e. Docker containers and Docker images) will not be persisted.
+**
+
+#### Terraform e LocalStack
+

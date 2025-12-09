@@ -36,3 +36,18 @@ provider "aws" {
     sts            = "http://localhost:4566"
   }
 }
+
+# endpoints {
+#   s3             = "http://s3.localhost.localstack.cloud:4566"
+# }
+
+# Note
+
+# If there are any difficulties resolving this DNS
+# record, you can utilize http://localhost:4566
+# as a fallback option in combination with
+# setting s3_use_path_style = true in the provider.
+# It’s worth noting that the S3 service endpoint
+# differs slightly from the other service endpoints
+# due to AWS deprecating path-style based access for
+# hosting buckets.
