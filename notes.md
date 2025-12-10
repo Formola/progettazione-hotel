@@ -992,5 +992,20 @@ PERSISTENCE=1 in docker-compose.yml permette di salvare i dati in un volume. In 
 **Please note that this VM manager does not fully support persistence. While the records of resources will be persisted, the instances or AMIs themselves (i.e. Docker containers and Docker images) will not be persisted.
 **
 
-#### Terraform e LocalStack
+#### Localstack EC2
 
+In LocalStack Pro, EC2 APIs utilize the Docker Engine backend to emulate EC2 instances. When you launch an EC2 instance locally, LocalStack sets up a Docker container recognized as an Amazon Machine Image (AMI). This enables users to log in to the instance, test their configurations, and conduct end-to-end integration tests on a local EC2 infrastructure.
+
+In LocalStack, networking features like subnets and VPCs are not emulated. LocalStack provides a default security group that manages the exposed ports for the EC2 instance. While users can create additional security groups, LocalStack focuses on the default security group.
+
+##### Problema Docker Desktop on MacOs
+
+Su macOS Docker Desktop non usa il kernel del sistema operativo per eseguire i container. Il problema nasce dal fatto che macOS non supporta nativamente le funzionalità richieste da Docker, come i namespace, i cgroups e soprattutto la gestione delle reti Linux, compresa la docker bridge network. Per compensare questa mancanza Docker crea una piccola macchina virtuale Linux tramite HyperKit o ora tramite Apple Virtualization Framework, e tutti i container girano dentro quella VM. Il risultato è che l’intero networking dei container vive all’interno di quella macchina virtuale e non è direttamente raggiungibile dal Mac.
+
+Quando un container crea un’interfaccia di rete bridge, come la classica docker0, questa esiste soltanto dentro la VM e non appare in macOS. Di conseguenza l’host non può raggiungere gli indirizzi interni dei container (per esempio 172.17.0.2), non può sniffare il traffico della rete bridge, non può usare ARP o routing diretto verso i container e non può collegarsi alla rete interna come farebbe normalmente su Linux. Per comunicare con i container si è costretti a usare il port forwarding che Docker Desktop configura automaticamente, ma non si può accedere alla rete interna vera e propria. Questo è il motivo per cui servizi che simulano macchine virtuali, come EC2 su LocalStack, non possono essere raggiunti tramite il loro IP interno: quel traffico resta confinato nella VM.
+
+Linux invece esegue Docker direttamente sul kernel dell’host, senza una VM intermedia. La rete bridge di Docker è creata come una normale interfaccia di rete, visibile dal sistema operativo e completamente integrata nello stack di rete del kernel. L’host può raggiungere direttamente i container tramite il loro indirizzo IP interno, può unirsi alla bridge network, può creare route personalizzate e può ispezionare pacchetti e interfacce come se fossero parte del sistema. L’assenza di virtualizzazione elimina ogni barriera tra host e container: lo spazio dei processi, del filesystem e della rete vive nello stesso kernel e questo rende possibile fare cose che su macOS sono tecnicamente precluse, come accedere nativamente agli indirizzi della rete Docker o collegare servizi host alla rete interna dei container senza passare da un port mapping.
+
+In breve, su macOS la rete Docker è nascosta dentro una VM e l’host non può entrarci, mentre su Linux la rete Docker è parte del sistema operativo e quindi totalmente accessibile.
+
+Nel nostro caso con le ec2 di localstack lanciate in container docker, su macos non possiamo raggiungere le ec2 tramite il loro ip interno perchè la rete docker è dentro la VM di docker desktop e non è raggiungibile dal macos host. Su linux invece possiamo raggiungere le ec2 tramite il loro ip interno perchè la rete docker è parte del sistema operativo linux host. Possiamo comunque raggiungere le ec2 tramite il port mapping configurato da localstack (es. porta 22 per ssh oppure porta 8000 per un servizio), ovviamente sia per macos che per linux (vedi tutorial https://hashnode.localstack.cloud/running-an-ec2-instance-locally-using-localstack-and-aws-cli)
