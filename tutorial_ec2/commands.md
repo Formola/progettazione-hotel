@@ -77,3 +77,15 @@ This is a POST request example. Received data: {'key': 'value'}
 
 curl http://localhost:8000/get
 This is a GET request example.
+
+# Tutorial ELB Docs Localstack 
+
+elb verso ec2 in docker container non funziona, o meglio funziona solo utilizzando un target group di tipo ip, quindi cosi si riesce, mandando una richiesta al load balancer, a raggiungere una istanza ec2, ma funziona solo raggiungendo la prima istanza registrata nel gruppo, se l'istanza viene fermata (tramite aws cli o docker container stoppato), con il target group di tipo ip non scatta il meccanismo di failover automatico verso la seconda istanza come ci si aspetterebbe. Questo accade perché, quando il container viene arrestato, il suo indirizzo IP viene rimosso fisicamente dalla tabella di routing della rete Docker, causando un errore immediato di tipo "No Route to Host" quando il Load Balancer tenta la connessione; il sistema di emulazione di LocalStack non interpreta correttamente questa eccezione di rete come un fallimento standard del controllo di integrità (Health Check), rimanendo quindi bloccato nel tentativo di inviare traffico verso un indirizzo inesistente invece di marcarlo come "Unhealthy" e deviare le richieste verso l'unica istanza rimasta attiva.
+
+Non possiamo risolvere cambiando il target group da ip a 'instance', poichè anche se la registrazione va a buon fine, il load balancer non riesce a raggiungere l'istanza ec2, probabilmente per problemi di networking interni a docker container che impediscono il corretto instradamento del flusso dati tra il servizio ALB simulato e il container dell'istanza, infatti ricevevamo sempre un payload vuoto nelle richieste http inoltrate.
+
+
+non funziona nemmeno il tutorial dalla docs su elb!.
+
+
+ morale della favola in locale possiamo usare le ec2 per fare dei test tramite ssh o http, ma non possiamo metterle dietro un load balancer simulato in localstack.
