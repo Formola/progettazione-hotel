@@ -928,27 +928,19 @@ Gli indici sono scelti **solo per le query critiche di ricerca**, così da migli
     <img src="./img/arch.png" alt="Architettura Cloud" width="800"/>
 </center>
 
-Questa architettura AWS rappresenta una soluzione **multi-tier** (a più livelli) e **microservizi** altamente ottimizzata per la **scalabilità orizzontale (Scale Out)** e la **resilienza**.
+Questa infrastruttura cloud-native è una soluzione multi-tier progettata per massimizzare l'efficienza, separando nettamente la distribuzione dei contenuti statici dalla logica di business dinamica. Tutto inizia con l'utente che contatta il sistema tramite Route 53 DNS, che risolve il dominio e indirizza il traffico, mentre la sicurezza dell'identità è delegata ad AWS Cognito, il quale gestisce login e token di autorizzazione in modo centralizzato.
 
-Il punto di ingresso per gli **Utenti** è **Route 53 DNS**, che si occupa della **risoluzione del nome di dominio** reindirizzando il traffico all'applicazione. L'autenticazione è gestita in modo centralizzato da **AWS Cognito**, che funge da **Identity Provider** per la registrazione e l'accesso degli utenti, integrandosi con l'account AWS.
+Per quanto riguarda l'interfaccia utente (Frontend), non utilizziamo server di calcolo (gruppo di ec2 su cui facciamo il deploy dell'app frontend) ma applichiamo il Direct Hosting Pattern. Invece di sprecare risorse computazionali per servire file HTML, CSS e JavaScript, questi asset statici risiedono direttamente in un bucket Amazon S3 configurato per l'hosting web. Davanti a questo storage si posiziona CloudFront, la CDN che distribuisce i contenuti globalmente riducendo la latenza a zero. Questo approccio elimina la necessità di server web tradizionali per il frontend, rendendo questa parte dell'infrastruttura incredibilmente economica e resistente ai picchi di traffico.
 
-Il traffico destinato all'interfaccia utente viene intercettato da un **ELB (Elastic Load Balancer)**. Il suo ruolo cruciale è distribuire equamente il carico di lavoro tra le istanze **EC2** attive all'interno del **Pool EC2**. Questo garantisce che nessun singolo server venga sovraccaricato e che l'applicazione rimanga disponibile anche in caso di guasto di un'istanza.
+La parte dinamica e computazionale (Backend) entra in gioco quando il browser effettua le chiamate API. Queste richieste vengono accolte da un API Gateway, che agisce come ingresso unificato e sicuro (si occupa anche dell'auth tramite cognito), per poi essere passate a un ELB (Elastic Load Balancer). Qui applichiamo il concetto di scalabilità dinamica: l'ELB distribuisce il carico su un pool di istanze EC2 che ospitano l'application server. Questo layer è governato dal Scale Out Pattern: il servizio di CloudWatch monitora costantemente lo stress delle macchine e, se necessario, ordina all'Auto Scaling di lanciare nuove istanze (da un'immagine AMI pronta) o di terminarle, garantendo potenza di calcolo solo quando serve davvero.
 
-Lo strato di **Frontend** implementa in modo rigoroso il **Cloud Pattern Scale Out** [https://en.clouddesignpattern.org/index.php/CDP_Scale_Out_Pattern.html](https://en.clouddesignpattern.org/index.php/CDP_Scale_Out_Pattern.html). La logica è la seguente:
-1. **Cloudwatch** monitora costantemente le metriche operative (come l'utilizzo della CPU, la latenza o il numero di richieste) delle istanze EC2.
-2. Quando queste metriche superano soglie predefinite, **Cloudwatch** invia una notifica al servizio di **Autoscaling**.
-3. L'**Autoscaling** risponde lanciando automaticamente nuove istanze EC2 basate su un'**AMI (Amazon Machine Image)** preconfigurata.
-Questo processo automatico consente all'applicazione di **aumentare o diminuire la capacità computazionale** per far fronte a variazioni improvvise del carico, gestendo la scalabilità orizzontalmente.
+Infine, la persistenza dei dati è architettata seguendo rigorosamente il Web Storage Pattern per ottimizzare le prestazioni e i costi. I dati strutturati e relazionali (utenti, transazioni) vengono salvati su RDS/Aurora PostgreSQL, un database gestito che garantisce integrità e backup automatici. Parallelamente, tutti i file "pesanti" o non strutturati (come le immagini caricate dagli utenti o i media) vengono scaricati su un bucket S3 dedicato (Media Property e Room), sgravando il database principale da un carico inutile e sfruttando lo storage a oggetti per una scalabilità praticamente infinita.
 
+https://en.clouddesignpattern.org/index.php/CDP_Web_Storage_Pattern.html
 
-Il frontend non accede direttamente al backend, ma instrada le richieste tramite l'**API Gateway**. Questo servizio agisce come un **punto di accesso unificato**, gestendo la sicurezza (autorizzazione, limitazione del rateo), il routing e la trasformazione delle richieste verso i servizi di backend.
+https://en.clouddesignpattern.org/index.php/CDP_Direct_Hosting_Pattern.html
 
-Il **Backend/Application Server** è strutturato con la stessa logica di scalabilità del frontend. Anch'esso è composto da un **Pool EC2** e gestito da un gruppo di **Autoscaling** supervisionato da **Cloudwatch**. Questa duplicazione del meccanismo di **Scale Out** assicura che anche la logica di business e l'elaborazione dei dati possano scalare in modo indipendente e dinamico rispetto all'interfaccia utente.
-
-
-L'architettura separa chiaramente lo storage, aderendo al **CDP Web Storage Pattern** [https://en.clouddesignpattern.org/index.php/CDP_Web_Storage_Pattern.html](https://en.clouddesignpattern.org/index.php/CDP_Web_Storage_Pattern.html), per ottimizzare prestazioni, costi e durabilità:
-1. **RDS/Aurora PostgreSQL:** Questo è il database relazionale gestito per i dati strutturati (ad esempio, profili utente, transazioni, configurazioni). **RDS/Aurora** offre **alta disponibilità**, **scalabilità** verticale e orizzontale (tramite repliche di lettura) e gestisce automaticamente backup e patch.
-2. **S3 Media Property e Room:** **Amazon S3 (Simple Storage Service)** è utilizzato per lo storage di oggetti non strutturati e statici, come i file multimediali. S3 offre **durabilità estrema** e una **scalabilità praticamente illimitata**, rendendolo la soluzione ideale per archiviare grandi volumi di dati come immagini e video, sgravando il database relazionale da questo compito.
+https://en.clouddesignpattern.org/index.php/CDP_Scale_Out_Pattern.html
 
 ### **IaC LocalStack (Community version)**
 
@@ -997,6 +989,17 @@ PERSISTENCE=1 in docker-compose.yml permette di salvare i dati in un volume. In 
 In LocalStack Pro, EC2 APIs utilize the Docker Engine backend to emulate EC2 instances. When you launch an EC2 instance locally, LocalStack sets up a Docker container recognized as an Amazon Machine Image (AMI). This enables users to log in to the instance, test their configurations, and conduct end-to-end integration tests on a local EC2 infrastructure.
 
 In LocalStack, networking features like subnets and VPCs are not emulated. LocalStack provides a default security group that manages the exposed ports for the EC2 instance. While users can create additional security groups, LocalStack focuses on the default security group.
+
+L'analisi è corretta. Il passaggio della documentazione da te citato evidenzia una fondamentale discrepanza tra il modello teorico delle risorse AWS (Infrastructure as Code) e l'effettiva implementazione tecnica all'interno di LocalStack Community.
+
+In questo ambiente di emulazione (anche versione pro), le primitive di rete quali VPC, Subnet e Route Tables rappresentano pure astrazioni logiche memorizzate nel database interno dell'applicazione (spesso gestito dalla libreria Moto), ma non corrispondono a una reale segmentazione della rete a livello infrastrutturale. Tutti i container lanciati, indipendentemente dal VPC di appartenenza dichiarato in Terraform, risiedono fisicamente sulla medesima rete "bridge" di Docker. Poiché l'isolamento di rete non è realmente emulato, il software necessita di un criterio deterministico per decidere quali porte del container debbano essere esposte sull'interfaccia di loopback (localhost) della macchina ospitante.
+
+Per semplificare l'esperienza di sviluppo, tale criterio è stato programmaticamente vincolato al Security Group di default. Quando LocalStack rileva una regola di ingresso (Ingress Rule) su questo specifico gruppo, interpreta tale configurazione come un'istruzione operativa da trasmettere al demone Docker, eseguendo effettivamente il port binding (il comando -p host_port:container_port).
+
+Al contrario, i Security Group personalizzati (Custom Security Groups) vengono trattati esclusivamente come metadati API. Sebbene Terraform registri correttamente le regole di firewall nel database di LocalStack permettendo il traffico tra container interni (ad esempio tra Load Balancer ed EC2), il sistema non traduce queste regole in comandi di esposizione verso l'host esterno.
+
+morale della favola per testare ec2 bisogna usare vpc, subnet e security group di default (non custom) in modo che localstack possa esporre le porte delle ec2 sull'host macos/linux.
+
 
 ##### Problema Docker Desktop on MacOs
 

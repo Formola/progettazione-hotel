@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "aws" {
-  region = var.aws_region
+  region = "us-east-1"
   access_key = "test"
   secret_key = "test"
 
@@ -34,6 +34,8 @@ provider "aws" {
     sns            = "http://localhost:4566"
     sqs            = "http://localhost:4566"
     sts            = "http://localhost:4566"
+    cloudfront    = "http://localhost:4566"
+
   }
 }
 

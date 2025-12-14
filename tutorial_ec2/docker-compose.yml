@@ -19,7 +19,6 @@ services:
       - DOCKER_HOST=unix:///var/run/docker.sock
       - EXTRA_CORS_ALLOWED_ORIGINS=*
       - DISABLE_CORS_CHECKS=1
-      - HOSTNAME_EXTERNAL=localhost.localstack.cloud
       - LAMBDA_DOCKER_NETWORK=docker_default
       - MAIN_DOCKER_NETWORK=docker_default
 
@@ -31,7 +30,9 @@ services:
     networks:
       - default
     volumes:
-      - "./volume:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
-      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
-  
+      # - "./volume:/var/lib/localstack"
+      - localstack_data:/var/lib/localstack
+
+volumes:
+  localstack_data:
