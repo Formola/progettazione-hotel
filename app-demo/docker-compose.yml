@@ -52,6 +52,21 @@ services:
     networks:
       - default
 
+  # --- FRONTEND ---
+  frontend:
+    container_name: frontend_svelte
+    build: ./frontend
+    volumes:
+      # Hot Reload (codice locale -> container)
+      - ./frontend:/app
+      - /app/node_modules 
+    ports:
+      - "5173:5173"
+    env_file:
+      - ./frontend/.env
+    networks:
+      - default
+
 volumes:
   localstack_data:
 

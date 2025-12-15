@@ -1,15 +1,13 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
+node_modules
 
-# Virtual Environment
-venv/
-.venv/
-env/
-
-# Environment Variables
+.svelte-kit
+build
+package
 .env
+.env.*
 
-# MacOS
 .DS_Store
+
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
