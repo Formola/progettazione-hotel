@@ -4,35 +4,27 @@
 # Questa risorsa crea la CDN che si posiziona davanti al bucket S3.
 resource "aws_cloudfront_distribution" "s3_distribution" {
   
-  # ORIGINE: Da dove prende i file?
-  # Puntiamo all'endpoint del sito web configurato nel file storage.tf.
-  # Usiamo una configurazione "Custom Origin" perché stiamo puntando all'endpoint
-  # del sito statico (che gestisce i redirect) e non al bucket grezzo.
   origin {
-    domain_name = aws_s3_bucket_website_configuration.frontend_config.website_endpoint
+    # Usiamo il dominio regionale del bucket (non l'endpoint del sito web)
+    # Questo è un indirizzo che LocalStack e AWS risolvono correttamente sempre.
+    domain_name = aws_s3_bucket.frontend_bucket.bucket_regional_domain_name
     origin_id   = "S3-Frontend-Origin"
 
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only" # L'endpoint S3 Website è in HTTP
-      origin_ssl_protocols   = ["TLSv1.2"]
+    # Usiamo s3_origin_config invece di custom_origin_config
+    s3_origin_config {
+      origin_access_identity = "" # In LocalStack/Public bucket possiamo lasciarlo vuoto o ometterlo
     }
   }
 
   enabled             = true
   is_ipv6_enabled     = true
-  default_root_object = "index.html" # Il file che viene servito se chiami la root /
+  default_root_object = "index.html"
 
-  # COMPORTAMENTO DELLA CACHE (Default Behavior)
-  # Come deve comportarsi CloudFront con le richieste standard?
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD"]
     target_origin_id = "S3-Frontend-Origin"
 
-    # Forwarding dei valori: per un sito statico non inoltriamo cookie o query string
-    # complessi per massimizzare la cache.
     forwarded_values {
       query_string = false
       cookies {
@@ -40,23 +32,35 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
       }
     }
 
-    viewer_protocol_policy = "redirect-to-https" # Forza sempre HTTPS per sicurezza
+    viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 0
-    default_ttl            = 3600  # Cache di 1 ora
-    max_ttl                = 86400 # Cache massima di 1 giorno
+    default_ttl            = 3600
+    max_ttl                = 86400
   }
 
-  # RESTRIZIONI GEOGRAFICHE
-  # Possiamo bloccare o permettere paesi specifici. Qui apriamo a tutti.
+  # GESTIONE SPA (Single Page App) ---
+  # Se riceve un 404 (file non trovato), servi index.html con status 200".
+  
+  custom_error_response {
+    error_code            = 403 # S3 spesso ritorna 403 invece di 404 per file mancanti
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 0
+  }
+
+  custom_error_response {
+    error_code            = 404
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 0
+  }
+
   restrictions {
     geo_restriction {
       restriction_type = "none"
     }
   }
 
-  # CERTIFICATO SSL
-  # Usiamo il certificato di default di CloudFront (*.cloudfront.net).
-  # In produzione si usa un certificato ACM col tuo dominio reale.
   viewer_certificate {
     cloudfront_default_certificate = true
   }
@@ -80,27 +84,29 @@ output "cloudfront_id" {
 
 
 /*
-Questo file configura l'ultimo miglio della consegna dei contenuti verso l'utente finale.
-La risorsa principale è aws_cloudfront_distribution,che definisce l'intera configurazione della CDN.
+La risorsa principale è aws_cloudfront_distribution, che definisce l'intera configurazione della CDN.
 
-Il blocco origin è il punto di collegamento con lo storage. Qui specifichiamo il domain_name recuperandolo
-direttamente dalla risorsa aws_s3_bucket_website_configuration che abbiamo creato nel file storage.tf.
-È importante notare che stiamo trattando l'origine come un custom_origin_config con protocollo http-only.
-Questo perché l'endpoint "Website Hosting" di S3 non supporta HTTPS nativamente; CloudFront si occuperà di
-crittografare la connessione con l'utente (HTTPS), ma parlerà con S3 in HTTP "dietro le quinte".
-Questa configurazione preserva le regole di routing (come i redirect per le Single Page Application) gestite da S3.
+1. ORIGIN (S3 REST API):
+non usiamo l'endpoint "Website Hosting" di S3, 
+ma trattiamo S3 come un semplice storage di oggetti (`s3_origin_config`). 
+Questo approccio è più sicuro e standard per le Single Page Application (SPA), poiché permette 
+a CloudFront di autenticarsi direttamente col bucket (in produzione tramite OAI/OAC) senza dover 
+rendere il bucket pubblicamente accessibile via HTTP.
 
-Il blocco default_cache_behavior è colui che decide come servire i contenuti. Abbiamo impostato
-viewer_protocol_policy = "redirect-to-https", che è una best practice di sicurezza fondamentale:
-se un utente digita http://mia-app.com, verrà immediatamente reindirizzato alla versione sicura https.
-Le impostazioni di TTL (Time To Live) definiscono per quanto tempo i file rimangono nei server di CloudFront
-prima di essere riscaricati da S3. Impostando forwarded_values su none per query string e cookie,
-ottimizziamo drasticamente le prestazioni, dicendo alla CDN che la pagina index.html è identica per
-tutti gli utenti, permettendole di servirla istantaneamente dalla cache.
+2. GESTIONE SPA (Single Page Application):
+Poiché non usiamo più la "Website Configuration" di S3 per i redirect, abbiamo introdotto i blocchi
+`custom_error_response`. Quando un utente visita un percorso lato client (es. /dashboard), 
+S3 non troverà quel file fisico e restituirà un errore 403 o 404. CloudFront intercetta 
+questi errori e restituisce invece il file `index.html` con uno status 200 OK. 
+Questo permette al router Javascript (SvelteKit/React/Vue) di caricarsi e mostrare la pagina corretta.
 
-Infine, il blocco viewer_certificate è impostato su true per il certificato di default.
-Questo significa che la tua applicazione sarà accessibile tramite un dominio generato da
-AWS (qualcosa come d111111abcdef8.cloudfront.net). In uno scenario di produzione reale, qui
-collegheremmo un certificato ACM (AWS Certificate Manager) per usare il dominio personalizzato
-(es. www.mia-app.com).
+3. CACHE E PERFORMANCE:
+Il blocco default_cache_behavior decide come servire i contenuti.
+- viewer_protocol_policy = "redirect-to-https": Forza sempre la connessione sicura.
+- forwarded_values (cookies/query_string = none): Massimizza la cache dicendo alla CDN che 
+  il contenuto statico non cambia in base ai cookie dell'utente.
+
+4. SSL:
+Il blocco viewer_certificate usa il certificato di default (*.cloudfront.net) per semplicità.
+In produzione, qui verrebbe collegato un certificato ACM per il dominio personalizzato.
 */
