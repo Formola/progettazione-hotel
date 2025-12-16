@@ -4,6 +4,7 @@
     import type { PropertyData } from '$lib/types';
     import { goto } from '$app/navigation';
 
+    // si aggiorna id se navighiamo a un'altra proprietà
     let propertyId = $derived(Number(page.params.id));
     let property = $state<PropertyData | null>(null);
     let isLoading = $state(true);

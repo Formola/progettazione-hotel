@@ -14,7 +14,8 @@ resource "aws_cognito_user_pool" "main_pool" {
   }
 
   # Gli utenti possono registrarsi con la loro email
-  auto_verified_attributes = ["email"]
+  # lo commentiamo altrimenti l'user dovrebbe ricevere un email di verifica con un codice
+  # auto_verified_attributes = ["email"]
   
   tags = {
     Name = "Main User Pool"
