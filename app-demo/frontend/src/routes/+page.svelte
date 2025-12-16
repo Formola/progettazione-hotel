@@ -1,8 +1,29 @@
-<script>
-    let searchQuery = $state("");
+<script lang="ts">
+    // Importiamo dal nuovo percorso modulare
+    import { searchApi } from '$lib/api/search'; 
+    import type { PropertyData } from '$lib/types';
 
-    function handleSearch() {
-        alert(`You searched for: ${searchQuery}. (Redirecting to results...)`);
+    let searchQuery = $state("");
+    let isLoading = $state(false);
+
+    async function handleSearch() {
+        if (!searchQuery) return; 
+
+        isLoading = true; 
+        
+        try {
+            // Usiamo searchApi specificamente
+            const results = await searchApi.searchProperties({ location: searchQuery });
+            
+            console.log("Risultati:", results);
+            alert(`Trovati ${results.length} hotel!`);
+            
+        } catch (e) {
+            console.error(e);
+            alert("Errore API");
+        } finally {
+            isLoading = false; 
+        }
     }
 </script>
 
