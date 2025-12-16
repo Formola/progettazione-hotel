@@ -7,7 +7,6 @@ class SearchApi extends BaseApi {
     async searchProperties(criteria: SearchCriteria): Promise<PropertyData[]> {
         console.log("🔍 [SearchAPI] Searching with:", criteria);
         
-        // MOCK DATA
         return [
             {
                 id: 1,
@@ -17,7 +16,7 @@ class SearchApi extends BaseApi {
                 description: "Perfettamente strutturato.",
                 status: 'PUBLISHED',
                 rooms: [{ type: 'SUITE', price: 200, capacity: 2 }],
-                mainImage: "https://via.placeholder.com/800x600?text=UML+Hotel"
+                mainImage: "https://placehold.co/800x600/orange/white?text=UML+Hotel"
             },
             {
                 id: 2,
@@ -27,13 +26,11 @@ class SearchApi extends BaseApi {
                 description: "Veloce e reattivo.",
                 status: 'PUBLISHED',
                 rooms: [{ type: 'DOUBLE', price: 120, capacity: 2 }],
-                mainImage: "https://via.placeholder.com/800x600?text=Svelte+Resort"
+                mainImage: "https://placehold.co/800x600/blue/white?text=Svelte+Resort"
             }
         ];
-        // return this.request<PropertyData[]>(`/search?...`);
     }
 
-    // Corrisponde a: +getPropertyById(id: int)
     async getPropertyById(id: number): Promise<PropertyData> {
         console.log(`🔍 [SearchAPI] Fetching details for ID: ${id}`);
         return {
@@ -43,8 +40,12 @@ class SearchApi extends BaseApi {
             address: "Via Architecture 101",
             description: "Dettaglio completo della property...",
             status: 'PUBLISHED',
-            rooms: [],
-            mainImage: "https://via.placeholder.com/800x600?text=Detail+View"
+            rooms: [
+                { type: 'SINGLE', price: 80, capacity: 1, amenities: ['Wifi', 'TV'] },
+                { type: 'DOUBLE', price: 150, capacity: 2, amenities: ['Wifi', 'TV', 'Balcony'] }
+            ],
+            mainImage: "https://placehold.co/1920x600/orange/white?text=Detail+View",
+            amenities: [{ name: "Wifi" }, { name: "Pool" }, { name: "Parking" }]
         };
     }
 }

@@ -1,8 +1,6 @@
 <script lang="ts">
-    // Importiamo dal nuovo percorso modulare
-    import { searchApi } from '$lib/api/search'; 
-    import type { PropertyData } from '$lib/types';
-
+    import { goto } from '$app/navigation';
+    
     let searchQuery = $state("");
     let isLoading = $state(false);
 
@@ -11,19 +9,11 @@
 
         isLoading = true; 
         
-        try {
-            // Usiamo searchApi specificamente
-            const results = await searchApi.searchProperties({ location: searchQuery });
-            
-            console.log("Risultati:", results);
-            alert(`Trovati ${results.length} hotel!`);
-            
-        } catch (e) {
-            console.error(e);
-            alert("Errore API");
-        } finally {
-            isLoading = false; 
-        }
+        // REINDIRIZZAMENTO
+        // Codifichiamo la stringa per evitare problemi con spazi o caratteri speciali
+        await goto(`/search?location=${encodeURIComponent(searchQuery)}`);
+        
+        isLoading = false; 
     }
 </script>
 
