@@ -29,19 +29,24 @@ export interface RoomData {
     capacity: number;
     amenities?: string[]; 
 }
-
 export interface PropertyData {
-    id?: number; 
-    ownerId: number;
+    id: string;
     name: string;
     address: string;
-    description: string;
-    status: PropertyStatus;
-    rooms: RoomData[];
+    city: string;
+    description: string | null;
+    status: string;
+    owner_id: string;
     mainImage?: string; 
-    amenities?: AmenityData[];
+    rooms: {
+        id: string;
+        type: string;
+        price: number;
+        capacity: number;
+        amenities?: string[];
+    }[];
+    amenities?: { name: string }[];
 }
-
 export interface UserData {
     id?: number;
     name: string;

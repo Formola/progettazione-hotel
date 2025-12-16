@@ -14,6 +14,9 @@ services:
       # Auth Token
       - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN:?}  # required for Pro
 
+      # Extensions for Terraform INIT HOOK
+      - EXTENSION_AUTO_INSTALL=localstack-extension-terraform-init
+
       - DEBUG=${DEBUG:-0}
       - PERSISTENCE=1 # persist data to volume
       # - SERVICES=s3,ec2,elb,autoscaling,cloudwatch,rds,apigateway,cognito-idp,iam,route53,sts,sns,cognito,sesv2
@@ -35,6 +38,8 @@ services:
       # - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
         # - "./volume:/var/lib/localstack"
       - localstack_data:/var/lib/localstack
+      # LOCALSTACK INIT HOOKS con terraform
+      - ./terraform:/etc/localstack/init/ready.d
 
 
   # --- BACKEND ---

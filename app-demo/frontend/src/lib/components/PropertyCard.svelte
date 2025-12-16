@@ -1,12 +1,26 @@
 <script lang="ts">
+	import {goto} from '$app/navigation';
     import type { PropertyData, RoomData } from '$lib/types';
 
     let { property } = $props<{ property: PropertyData }>();
+
+    $inspect(property);
 
     let minPrice = $derived.by(() => {
         if (!property?.rooms || property.rooms.length === 0) return 0;
         return Math.min(...property.rooms.map((r: RoomData) => r.price));
     });
+
+    function goToDetails(e: MouseEvent) {
+            e.preventDefault();
+            
+            // snapshot rimuove i Proxy di Svelte 5 permettendo il clone nella History
+            const plainProperty = $state.snapshot(property);
+            
+            goto(`/properties/${property.id}`, { 
+                state: { property: plainProperty } 
+            });
+        }
 </script>
 
 <div class="card property-card">
@@ -29,7 +43,7 @@
 
         <div class="content">
             <p class="is-size-7 has-text-grey mb-4">
-                {property.description.substring(0, 100)}...
+                {property.description ? property.description.substring(0, 100) + '...' : 'No description available.'}
             </p>
 
             <div class="tags">
@@ -53,11 +67,15 @@
                     </div>
                 </div>
                 <div class="level-right">
-                    <a href="/properties/{property.id}" class="button is-primary is-outlined is-small is-rounded has-text-weight-bold">
+                    <a 
+                        href="/properties/{property.id}" 
+                        class="button is-primary is-outlined is-small is-rounded has-text-weight-bold"
+                        onclick={goToDetails}
+                    >
                         Details
                     </a>
                 </div>
-            </div>
+                            </div>
         </div>
     </div>
 </div>
