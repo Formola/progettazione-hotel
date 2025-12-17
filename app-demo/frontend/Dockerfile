@@ -11,6 +11,11 @@ RUN npm install
 # Copiamo il resto (utile per build standalone, anche se il volume lo coprirà)
 COPY . .
 
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+
 # Esponiamo la porta di Vite/SvelteKit
 EXPOSE 5173
 

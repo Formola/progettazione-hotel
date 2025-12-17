@@ -33,6 +33,7 @@
 		"vite": "^7.2.6"
 	},
 	"dependencies": {
+		"@aws-sdk/client-cognito-identity-provider": "^3.953.0",
 		"bulma": "^1.0.4"
 	}
 }

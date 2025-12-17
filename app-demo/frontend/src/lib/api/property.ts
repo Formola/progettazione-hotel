@@ -8,7 +8,7 @@ class PropertyApi extends BaseApi {
     async createProperty(data: PropertyData): Promise<PropertyData> {
         console.log("🏨 [PropertyAPI] Creating:", data);
         // Simuliamo la risposta del server con l'ID assegnato
-        return { ...data, id: Math.floor(Math.random() * 1000) };
+        return { ...data, id: String(Math.floor(Math.random() * 1000)) };
         // return this.request<PropertyData>('/properties', 'POST', data);
     }
 

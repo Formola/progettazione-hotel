@@ -13,5 +13,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # sostituendoli con quelli locali in tempo reale
 COPY . .
 
+# copia lo script di entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# usa lo script come entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
+
 # Dev server con hot reload
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

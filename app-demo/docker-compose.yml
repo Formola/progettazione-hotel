@@ -18,7 +18,7 @@ services:
       - EXTENSION_AUTO_INSTALL=localstack-extension-terraform-init
 
       - DEBUG=${DEBUG:-0}
-      - PERSISTENCE=1 # persist data to volume
+      # - PERSISTENCE=1 # persist data to volume
       # - SERVICES=s3,ec2,elb,autoscaling,cloudwatch,rds,apigateway,cognito-idp,iam,route53,sts,sns,cognito,sesv2
       - DOCKER_HOST=unix:///var/run/docker.sock
       - EXTRA_CORS_ALLOWED_ORIGINS=*
@@ -40,6 +40,7 @@ services:
       - localstack_data:/var/lib/localstack
       # LOCALSTACK INIT HOOKS con terraform
       - ./terraform:/etc/localstack/init/ready.d
+      - localstack_env:/config
 
 
   # --- BACKEND ---
@@ -48,32 +49,54 @@ services:
     build: ./backend
     volumes:
       - ./backend:/app
+      # - ./terraform:/app/terraform  # montiamo il folder che conterrà .env_localstack
+      # - ./terraform:/config
+      - localstack_env:/config
     ports:
       - "8000:8000"
-    env_file:
-      - ./backend/.env
+    env_file: # carica variabili d'ambiente da file, ne possiamo specificare più di uno
+    - path: ./backend/.env
+      required: true
+    
+    # inutile perchè appena parte il container questo file non esiste ancora, viene creato dopo da terraform init hook
+    # - path: ./terraform/localstack.env
+    #   required: false
     depends_on:
       - localstack
     networks:
       - default
 
+
+
   # --- FRONTEND ---
   frontend:
-    container_name: frontend_svelte
+    container_name: frontend_sveltekit
     build: ./frontend
     volumes:
       # Hot Reload (codice locale -> container)
-      - ./frontend:/app
-      - /app/node_modules 
+      - ./frontend:/app # bind mount del codice sorgente
+      - /app/node_modules # volume anonimo per node_modules, non considera /node_modules locale ma solo quello del container
+      # - ./terraform:/app/terraform  # monta .env_localstack. no perchè /app è gia montato in ./frontend, poi creerebbe una cartella terraoform lì
+      # - ./terraform:/config
+      - localstack_env:/config
     ports:
       - "5173:5173"
     env_file:
-      - ./frontend/.env
+      - path: ./frontend/.env
+        required: true
+
+      # inutile perchè appena parte il container questo file non esiste ancora, viene creato dopo da terraform init hook
+      # - path: ./terraform/localstack.env
+      #   required: false
+    depends_on:
+      - localstack
     networks:
       - default
 
+
 volumes:
   localstack_data:
+  localstack_env:
 
 networks:
   default:

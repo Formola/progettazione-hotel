@@ -13,10 +13,8 @@ resource "aws_cognito_user_pool" "main_pool" {
     require_uppercase = true
   }
 
-  # Gli utenti possono registrarsi con la loro email
-  # lo commentiamo altrimenti l'user dovrebbe ricevere un email di verifica con un codice
-  # auto_verified_attributes = ["email"]
-  
+  auto_verified_attributes = ["email"]
+
   tags = {
     Name = "Main User Pool"
   }
@@ -33,12 +31,35 @@ resource "aws_cognito_user_pool_client" "web_client" {
   # non possono conservarlo in modo sicuro.
   generate_secret = false
 
+  # SECURITY: Prevenzione Enumerazione Utenti
+  # Con "ENABLED", Cognito risponde con un errore generico anche se l'user non esiste.
+  # Evita che qualcuno provi 1000 email per vedere quali sono registrate.
+  prevent_user_existence_errors = "ENABLED"
+
   # Flussi di autenticazione permessi (SRP è più sicuro per il web)
   explicit_auth_flows = [
     "ALLOW_USER_SRP_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH",
     "ALLOW_USER_PASSWORD_AUTH"
   ]
+
+  # TOKEN VALIDITY
+  # Access Token breve (es. 1 ora)
+  # Refresh Token lungo (es. 1 giorni) -> Permette all'utente di restare loggato.
+  access_token_validity = 60
+  id_token_validity     = 60
+  token_validity_units {
+    access_token  = "minutes"
+    id_token      = "minutes"
+    refresh_token = "days"
+  }
+
+  # refresh token possiamo mettere un mi
+  refresh_token_validity = 1
+
+  # Revoca Token
+  # Permette di invalidare i token se necessario
+  enable_token_revocation = true
 }
 
 # User Pool Domain (Opzionale ma utile)

@@ -81,7 +81,8 @@ resource "aws_db_instance" "postgres" {
 
   db_name  = "myappdb"
   username = "dbadmin"
-  password = "password" # In prod si usa AWS Secrets Manager!!
+  password =  var.db_password
+  # In prod si usa AWS Secrets Manager!!
 
   # Networking & Sicurezza
   db_subnet_group_name   = aws_db_subnet_group.db_subnet_group.name
