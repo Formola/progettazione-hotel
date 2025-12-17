@@ -7,46 +7,55 @@ export type RoomType = 'SINGLE' | 'DOUBLE' | 'SUITE';
 export type MediaType = 'IMAGE' | 'VIDEO';
 export type UserRole = 'GUEST' | 'OWNER' | 'ADMIN';
 
+
 export interface MediaData {
     id?: number; 
     fileName: string;
     fileType: MediaType;
-    base64Data?: string; 
     url?: string;
 }
 
-export interface AmenityData {
-    id?: number;
-    name: string;
-    description?: string;
-    isIncluded?: boolean; 
+export interface IAmenity {
+    getName(): string;
+    getCategory(): string;
 }
 
+export interface PropertyAmenityData extends IAmenity {
+    name: string;
+    category: string; // Es. "General", "Kitchen"
+}
+
+export interface RoomAmenityData extends IAmenity {
+    name: string;
+    category: string; // Es. "Bathroom", "Entertainment"
+}
+
+
 export interface RoomData {
-    id?: number;
-    type: RoomType;
+    id: string;
+    type: string;
+    description: string | null;
     price: number;
     capacity: number;
-    amenities?: string[]; 
+    amenities: RoomAmenityData[];
+    media: MediaData[];
 }
+
 export interface PropertyData {
     id: string;
     name: string;
     address: string;
     city: string;
+    country: string;
     description: string | null;
     status: string;
     owner_id: string;
-    mainImage?: string; 
-    rooms: {
-        id: string;
-        type: string;
-        price: number;
-        capacity: number;
-        amenities?: string[];
-    }[];
-    amenities?: { name: string }[];
+    rooms: RoomData[];
+    amenities: PropertyAmenityData[];
+    media: MediaData[];
 }
+
+
 export interface UserData {
     id?: number;
     name: string;
@@ -62,4 +71,6 @@ export interface SearchCriteria {
     maxPrice?: number;
     checkIn?: Date;
     checkOut?: Date;
+    guests?: number;
+    
 }

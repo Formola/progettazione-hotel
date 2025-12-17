@@ -1,140 +1,151 @@
 <script lang="ts">
-    import { page } from '$app/state';
-    import { searchApi } from '$lib/api/search';
-    import type { PropertyData } from '$lib/types';
+    import { onDestroy } from 'svelte';
     import { goto } from '$app/navigation';
+    import type { PropertyData } from '$lib/types'; //
+    import { selectedProperty } from '$lib/stores/selection';
 
-    // si aggiorna id se navighiamo a un'altra proprietà
-    let propertyId = $derived(Number(page.params.id));
     let property = $state<PropertyData | null>(null);
-    let isLoading = $state(true);
-    let error = $state<string | null>(null);
 
-    // Carousel state
-    let currentImageIndex = $state(0);
-    const mockImages = [
-        "https://placehold.co/1200x800/f8f9fa/212529?text=Main+Property+Photo",
-        "https://placehold.co/1200x800/f1f3f5/212529?text=Bedroom+View",
-        "https://placehold.co/1200x800/e9ecef/212529?text=Modern+Kitchen",
-        "https://placehold.co/1200x800/dee2e6/212529?text=Outdoor+Area"
-    ];
-
-    function nextImage() { currentImageIndex = (currentImageIndex + 1) % mockImages.length; }
-    function prevImage() { currentImageIndex = (currentImageIndex - 1 + mockImages.length) % mockImages.length; }
-
-    $effect(() => {
-        const currentId = propertyId;
-        if (!currentId) return;
-        const fetchData = async () => {
-            if (property && property.id === currentId) return;
-            isLoading = true;
-            try {
-                property = await searchApi.getPropertyById(currentId);
-            } catch (err) {
-                error = 'Error loading property details.';
-            } finally {
-                isLoading = false;
-            }
-        };
-        fetchData();
+    // Recupero dati dallo store
+    const unsubscribe = selectedProperty.subscribe(value => {
+        property = value;
     });
+
+    // Debug per vedere cosa arriva
+    $inspect(property);
+
+    onDestroy(unsubscribe);
+
+    let currentImageIndex = $state(0);
+    
+    // Gestione Immagini: usa le reali se ci sono, altrimenti mock
+    let displayImages = $derived.by(() => {
+        if (property?.media && property.media.length > 0) {
+            return property.media.map(m => m.url || `https://placehold.co/1200x500?text=${m.fileName}`);
+        }
+        return [
+            "https://placehold.co/1200x500/ffffff/000000?text=Main+Property+Photo",
+            "https://placehold.co/1200x500/ffffff/000000?text=Internal+Room+View"
+        ];
+    });
+
+    function nextImage() { currentImageIndex = (currentImageIndex + 1) % displayImages.length; }
+    function prevImage() { currentImageIndex = (currentImageIndex - 1 + displayImages.length) % displayImages.length; }
 </script>
 
-{#if isLoading}
-    <div class="is-flex is-justify-content-center is-align-items-center" style="height: 60vh;">
-        <div class="loader is-loading" style="width: 3rem; height: 3rem;"></div>
+<nav class="has-background-white border-bottom py-3 is-sticky">
+    <div class="container is-max-desktop px-3">
+        <button class="button is-ghost has-text-black p-0" onclick={() => history.back()}>
+            <span class="icon">←</span> <span class="has-text-weight-bold">Back to results</span>
+        </button>
     </div>
-{:else if error || !property}
-    <div class="container p-6">
-        <div class="notification is-danger is-light">
-            {error || 'Property not found'}
-            <button class="button is-small is-dark mt-2" onclick={() => goto('/search')}>← Back to search</button>
-        </div>
-    </div>
-{:else}
-    <nav class="py-4 has-background-white border-bottom sticky-nav">
-        <div class="container is-max-desktop px-3">
-            <button class="button is-ghost has-text-black px-0" onclick={() => history.back()}>
-                <span class="icon">←</span> <span class="has-text-weight-bold">Back to results</span>
-            </button>
-        </div>
-    </nav>
+</nav>
 
-    <main class="has-background-white pb-6">
-        <div class="container is-max-desktop py-5 px-3">
+{#if !property}
+    <main class="section has-background-white-bis" style="min-height: 100vh;">
+        <div class="container is-max-desktop has-text-centered">
+            <div class="box shadow-soft">
+                <h2 class="title is-4">Property not found in memory.</h2>
+                <button class="button is-primary is-rounded" onclick={() => goto('/search')}>Back to Search</button>
+            </div>
+        </div>
+    </main>
+{:else}
+    <main class="section has-background-white-bis" style="min-height: 100vh;">
+        <div class="container is-max-desktop">
             
             <div class="mb-5">
                 <h1 class="title is-2 has-text-black has-text-weight-bold mb-2">{property.name}</h1>
                 <p class="subtitle is-5 has-text-grey-darker">
-                    <span class="icon">📍</span> {property.address}
+                    <span class="icon">📍</span> {property.address}, {property.city} ({property.country})
                 </p>
             </div>
 
-            <div class="carousel-container mb-6 shadow-soft">
-                <div class="carousel-slide">
-                    <img src={currentImageIndex === 0 ? property.mainImage : mockImages[currentImageIndex]} alt="Property" />
-                    
-                    <button class="nav-btn prev" onclick={prevImage}>❮</button>
-                    <button class="nav-btn next" onclick={nextImage}>❯</button>
-                    
-                    <div class="image-counter">
-                        {currentImageIndex + 1} / {mockImages.length}
-                    </div>
+            <div class="box p-0 is-overflow-hidden shadow-soft mb-6 carousel-container">
+                <img src={displayImages[currentImageIndex]} 
+                     class="carousel-img" 
+                     alt={property.name} />
+                
+                <button class="carousel-btn prev" onclick={prevImage}>❮</button>
+                <button class="carousel-btn next" onclick={nextImage}>❯</button>
+                
+                <div class="image-counter">
+                    <span class="tag is-dark">{currentImageIndex + 1} / {displayImages.length}</span>
                 </div>
             </div>
 
             <div class="columns is-variable is-8">
                 <div class="column is-8">
-                    <section class="content">
-                        <h3 class="title is-4 has-text-black mb-4">Description</h3>
+                    
+                    <section class="box p-5 shadow-soft mb-6">
+                        <h3 class="title is-4 has-text-black mb-4">About this place</h3>
                         <p class="is-size-5 has-text-grey-darker" style="line-height: 1.7;">
-                            {property.description}
+                            {property.description || `Welcome to ${property.name}.`}
                         </p>
                     </section>
 
-                    <hr class="my-6" />
-
-                    <section>
+                    {#if property.amenities && property.amenities.length > 0}
+                    <section class="box p-5 shadow-soft mb-6">
                         <h3 class="title is-4 has-text-black mb-5">What this place offers</h3>
                         <div class="columns is-multiline is-mobile">
-                            {#if property.amenities}
-                                {#each property.amenities as amenity}
-                                    <div class="column is-6-tablet is-12-mobile">
-                                        <div class="amenity-box">
-                                            <span class="amenity-icon">✓</span>
-                                            <span class="has-text-black has-text-weight-semibold">
-                                                {typeof amenity === 'string' ? amenity : amenity.name}
-                                            </span>
+                            {#each property.amenities as amenity}
+                                <div class="column is-6-tablet is-12-mobile mb-2">
+                                    <div class="is-flex is-align-items-center">
+                                        <span class="icon has-text-primary mr-3">
+                                            <i class="fas fa-check"></i> ✓
+                                        </span>
+                                        <div>
+                                            <p class="has-text-weight-bold has-text-black mb-0">
+                                                {amenity.name}
+                                            </p>
+                                            <p class="is-size-7 has-text-grey">
+                                                {amenity.category}
+                                            </p>
                                         </div>
                                     </div>
-                                {/each}
-                            {/if}
+                                </div>
+                            {/each}
                         </div>
                     </section>
-
-                    <hr class="my-6" />
+                    {/if}
 
                     <section>
                         <h3 class="title is-4 has-text-black mb-5">Available Rooms</h3>
                         {#if property.rooms}
                             {#each property.rooms as room}
-                                <div class="room-row-modern mb-4">
-                                    <div class="room-info">
-                                        <h4 class="title is-5 has-text-black mb-1">{room.type}</h4>
-                                        <p class="has-text-grey-darker mb-2">Max {room.capacity} guests</p>
-                                        <div class="tags">
-                                            {#each room.amenities || [] as a}
-                                                <span class="tag is-white border-grey">{a}</span>
+                                <div class="box p-5 shadow-soft mb-4">
+                                    <div class="level is-mobile mb-3">
+                                        <div class="level-left">
+                                            <div>
+                                                <h4 class="title is-5 has-text-black mb-1">{room.type}</h4>
+                                                <p class="is-size-6 has-text-grey-darker">Max {room.capacity} guests</p>
+                                            </div>
+                                        </div>
+                                        <div class="level-right has-text-right">
+                                            <div>
+                                                <p class="title is-4 has-text-black mb-0">€{room.price}</p>
+                                                <p class="is-size-7 has-text-grey">per night</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {#if room.description}
+                                        <p class="mb-4 has-text-grey-dark">{room.description}</p>
+                                    {/if}
+
+                                    {#if room.amenities && room.amenities.length > 0}
+                                        <div class="tags mb-5">
+                                            {#each room.amenities as amenityName}
+                                                <span class="tag is-light is-rounded border-grey">
+                                                    {amenityName}
+                                                </span>
                                             {/each}
                                         </div>
-                                    </div>
-                                    <div class="room-booking">
-                                        <div class="price-display">
-                                            <span class="price-amount">€{room.price}</span>
-                                            <span class="price-unit">/night</span>
-                                        </div>
-                                        <button class="button is-black is-rounded is-fullwidth mt-2">Book Now</button>
-                                    </div>
+                                    {/if}
+
+                                    <button class="button is-primary is-fullwidth is-rounded has-text-weight-bold">
+                                        Book Now
+                                    </button>
                                 </div>
                             {/each}
                         {/if}
@@ -143,17 +154,17 @@
 
                 <div class="column is-4">
                     <div class="sticky-sidebar">
-                        <div class="box owner-card p-5">
-                            <h3 class="title is-5 has-text-black mb-4">Owner Info</h3>
+                        <div class="box p-5 shadow-soft">
+                            <p class="heading has-text-grey-darker has-text-weight-bold mb-4">Property Manager</p>
                             <div class="is-flex is-align-items-center mb-5">
-                                <div class="owner-avatar">H</div>
+                                <div class="owner-avatar mr-3">{property.owner_id?.charAt(0).toUpperCase()}</div>
                                 <div>
-                                    <p class="has-text-weight-bold has-text-black">Owner #{property.ownerId}</p>
-                                    <p class="is-size-7 has-text-grey-darker has-text-weight-medium">Verified Property Manager</p>
+                                    <p class="has-text-weight-bold has-text-black">{property.owner_id}</p>
+                                    <p class="is-size-7 has-text-success">Verified Listing</p>
                                 </div>
                             </div>
-                            <button class="button is-primary is-fullwidth is-rounded has-text-weight-bold">
-                                Contact Owner
+                            <button class="button is-dark is-fullwidth is-rounded has-text-weight-bold">
+                                Contact Host
                             </button>
                         </div>
                     </div>
@@ -164,101 +175,44 @@
 {/if}
 
 <style>
-    /* UTILITIES */
+    .shadow-soft {
+        box-shadow: 0 8px 20px rgba(0,0,0,0.05) !important;
+        border: 1px solid #f0f0f0;
+        background: white;
+    }
+    .is-overflow-hidden { overflow: hidden; border-radius: 12px; }
     .border-bottom { border-bottom: 1px solid #f0f0f0; }
-    .border-grey { border: 1px solid #dbdbdb; }
-    .shadow-soft { box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-    .sticky-nav { position: sticky; top: 0; z-index: 30; }
-    .sticky-sidebar { position: sticky; top: 85px; }
-
-    /* CAROUSEL */
-    .carousel-container {
-        position: relative;
-        height: 500px;
-        background: #f5f5f5;
-        border-radius: 16px;
-        overflow: hidden;
+    .is-sticky { position: sticky; top: 0; z-index: 10; }
+    .sticky-sidebar { position: sticky; top: 80px; }
+    
+    .owner-avatar {
+        width: 48px; height: 48px;
+        background: #00d1b2; color: white;
+        border-radius: 50%; display: flex;
+        align-items: center; justify-content: center;
+        font-weight: bold; font-size: 1.2rem;
     }
-    .carousel-slide img { width: 100%; height: 100%; object-fit: cover; }
-
-    /* Buttons visible on hover */
-    .nav-btn {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        background: rgba(255, 255, 255, 0.9);
-        border: none;
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        cursor: pointer;
-        opacity: 0;
-        transition: all 0.2s ease-in-out;
+    
+    .carousel-container { height: 400px; position: relative; }
+    .carousel-img { width: 100%; height: 100%; object-fit: cover; }
+    .image-counter { position: absolute; bottom: 15px; right: 15px; }
+    
+    .carousel-btn {
+        position: absolute; top: 50%; transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.85); border: none;
+        width: 45px; height: 45px; border-radius: 50%;
+        cursor: pointer; font-size: 1.2rem; display: flex;
+        align-items: center; justify-content: center;
+        opacity: 0; transition: opacity 0.3s ease;
         box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.1rem;
     }
-    .carousel-container:hover .nav-btn { opacity: 1; }
+    .carousel-container:hover .carousel-btn { opacity: 1; }
+    .carousel-btn:hover { background: white; }
     .prev { left: 20px; }
     .next { right: 20px; }
 
-    .image-counter {
-        position: absolute;
-        bottom: 20px;
-        right: 20px;
-        background: rgba(0, 0, 0, 0.75);
-        color: white;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-    }
+    .border-grey { border: 1px solid #dbdbdb; }
 
-    /* AMENITY BOX */
-    .amenity-box {
-        display: flex;
-        align-items: center;
-        padding: 1.2rem;
-        background: #fafafa;
-        border: 1px solid #eee;
-        border-radius: 12px;
-    }
-    .amenity-icon { color: #00d1b2; font-weight: bold; margin-right: 15px; }
-
-    /* ROOM ROW */
-    .room-row-modern {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1.5rem;
-        background: white;
-        border: 1px solid #eee;
-        border-radius: 16px;
-        transition: border-color 0.2s;
-    }
-    .room-row-modern:hover { border-color: #333; }
-    .price-amount { font-size: 1.8rem; font-weight: 800; color: #000; }
-    .price-unit { color: #4a4a4a; font-size: 0.9rem; margin-left: 2px; }
-
-    /* OWNER CARD (FIXED COLORS) */
-    .owner-card {
-        background: #ffffff;
-        border: 1px solid #dbdbdb;
-        border-radius: 16px;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-    }
-    .owner-avatar {
-        width: 48px; height: 48px;
-        background: #f0f0f0; border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        margin-right: 15px; font-weight: bold; color: #222;
-        border: 1px solid #dbdbdb;
-    }
-
-    @media (max-width: 768px) {
-        .carousel-container { height: 320px; }
-        .room-row-modern { flex-direction: column; align-items: flex-start; }
-        .room-booking { width: 100%; margin-top: 1rem; }
-    }
+    :global(.title) { color: #000000 !important; }
+    :global(.subtitle) { color: #4a4a4a !important; }
 </style>

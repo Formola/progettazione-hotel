@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {goto} from '$app/navigation';
+	import {selectedProperty} from '$lib/stores/selection';
     import type { PropertyData, RoomData } from '$lib/types';
 
     let { property } = $props<{ property: PropertyData }>();
@@ -14,12 +15,11 @@
     function goToDetails(e: MouseEvent) {
             e.preventDefault();
             
-            // snapshot rimuove i Proxy di Svelte 5 permettendo il clone nella History
-            const plainProperty = $state.snapshot(property);
+            // Salviamo nello store globale
+            selectedProperty.set($state.snapshot(property));
             
-            goto(`/properties/${property.id}`, { 
-                state: { property: plainProperty } 
-            });
+            // Navighiamo normalmente
+            goto(`/properties/${property.id}`);
         }
 </script>
 
