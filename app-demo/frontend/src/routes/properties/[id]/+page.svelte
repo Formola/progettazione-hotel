@@ -1,9 +1,10 @@
 <script lang="ts">
     import { onDestroy } from 'svelte';
     import { goto } from '$app/navigation';
-    import type { PropertyData } from '$lib/types'; //
+    import type { PropertyData } from '$lib/types'; 
     import { selectedProperty } from '$lib/stores/selection';
 
+    // Usiamo lo State di Svelte 5
     let property = $state<PropertyData | null>(null);
 
     // Recupero dati dallo store
@@ -11,18 +12,20 @@
         property = value;
     });
 
-    // Debug per vedere cosa arriva
+    // Debug: ispeziona l'oggetto PropertyData completo
     $inspect(property);
 
     onDestroy(unsubscribe);
 
     let currentImageIndex = $state(0);
     
-    // Gestione Immagini: usa le reali se ci sono, altrimenti mock
+    // Gestione Immagini: Adattata al tipo 'Media'
     let displayImages = $derived.by(() => {
+        // Se abbiamo media reali nel DB, usiamo quelli
         if (property?.media && property.media.length > 0) {
-            return property.media.map(m => m.url || `https://placehold.co/1200x500?text=${m.fileName}`);
+            return property.media.map(m => m.url || `https://placehold.co/1200x500?text=${encodeURIComponent(m.description || 'View')}`);
         }
+        // Fallback se non ci sono immagini
         return [
             "https://placehold.co/1200x500/ffffff/000000?text=Main+Property+Photo",
             "https://placehold.co/1200x500/ffffff/000000?text=Internal+Room+View"
@@ -59,6 +62,9 @@
                 <p class="subtitle is-5 has-text-grey-darker">
                     <span class="icon">📍</span> {property.address}, {property.city} ({property.country})
                 </p>
+                {#if property.status === 'DRAFT'}
+                    <span class="tag is-warning">Draft</span>
+                {/if}
             </div>
 
             <div class="box p-0 is-overflow-hidden shadow-soft mb-6 carousel-container">
@@ -66,12 +72,14 @@
                      class="carousel-img" 
                      alt={property.name} />
                 
-                <button class="carousel-btn prev" onclick={prevImage}>❮</button>
-                <button class="carousel-btn next" onclick={nextImage}>❯</button>
-                
-                <div class="image-counter">
-                    <span class="tag is-dark">{currentImageIndex + 1} / {displayImages.length}</span>
-                </div>
+                {#if displayImages.length > 1}
+                    <button class="carousel-btn prev" onclick={prevImage}>❮</button>
+                    <button class="carousel-btn next" onclick={nextImage}>❯</button>
+                    
+                    <div class="image-counter">
+                        <span class="tag is-dark">{currentImageIndex + 1} / {displayImages.length}</span>
+                    </div>
+                {/if}
             </div>
 
             <div class="columns is-variable is-8">
@@ -92,7 +100,11 @@
                                 <div class="column is-6-tablet is-12-mobile mb-2">
                                     <div class="is-flex is-align-items-center">
                                         <span class="icon has-text-primary mr-3">
-                                            <i class="fas fa-check"></i> ✓
+                                            {#if amenity.icon}
+                                                <img src={amenity.icon} alt={amenity.name} style="width: 20px; height: 20px;">
+                                            {:else}
+                                                <i class="fas fa-check"></i>
+                                            {/if}
                                         </span>
                                         <div>
                                             <p class="has-text-weight-bold has-text-black mb-0">
@@ -111,13 +123,14 @@
 
                     <section>
                         <h3 class="title is-4 has-text-black mb-5">Available Rooms</h3>
-                        {#if property.rooms}
+                        {#if property.rooms && property.rooms.length > 0}
                             {#each property.rooms as room}
                                 <div class="box p-5 shadow-soft mb-4">
                                     <div class="level is-mobile mb-3">
                                         <div class="level-left">
                                             <div>
-                                                <h4 class="title is-5 has-text-black mb-1">{room.type}</h4>
+                                                <h4 class="title is-5 has-text-black mb-1">
+                                                    {room.type} </h4>
                                                 <p class="is-size-6 has-text-grey-darker">Max {room.capacity} guests</p>
                                             </div>
                                         </div>
@@ -135,9 +148,9 @@
 
                                     {#if room.amenities && room.amenities.length > 0}
                                         <div class="tags mb-5">
-                                            {#each room.amenities as amenityName}
+                                            {#each room.amenities as amenity}
                                                 <span class="tag is-light is-rounded border-grey">
-                                                    {amenityName}
+                                                    {amenity.name}
                                                 </span>
                                             {/each}
                                         </div>
@@ -148,6 +161,8 @@
                                     </button>
                                 </div>
                             {/each}
+                        {:else}
+                            <p class="has-text-grey">No rooms listed yet.</p>
                         {/if}
                     </section>
                 </div>
@@ -157,9 +172,13 @@
                         <div class="box p-5 shadow-soft">
                             <p class="heading has-text-grey-darker has-text-weight-bold mb-4">Property Manager</p>
                             <div class="is-flex is-align-items-center mb-5">
-                                <div class="owner-avatar mr-3">{property.owner_id?.charAt(0).toUpperCase()}</div>
-                                <div>
-                                    <p class="has-text-weight-bold has-text-black">{property.owner_id}</p>
+                                <div class="owner-avatar mr-3">
+                                    {property.owner_id ? property.owner_id.charAt(0).toUpperCase() : '?'}
+                                </div>
+                                <div style="overflow: hidden;">
+                                    <p class="has-text-weight-bold has-text-black is-size-7" style="white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
+                                        ID: {property.owner_id}
+                                    </p>
                                     <p class="is-size-7 has-text-success">Verified Listing</p>
                                 </div>
                             </div>
@@ -187,6 +206,7 @@
     
     .owner-avatar {
         width: 48px; height: 48px;
+        min-width: 48px;
         background: #00d1b2; color: white;
         border-radius: 50%; display: flex;
         align-items: center; justify-content: center;

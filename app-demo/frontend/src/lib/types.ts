@@ -1,68 +1,112 @@
 // ==========================================
-// FRONTEND DTOs
+// CONDIVISI (Enums)
 // ==========================================
-
 export type PropertyStatus = 'DRAFT' | 'PUBLISHED' | 'INACTIVE';
 export type RoomType = 'SINGLE' | 'DOUBLE' | 'SUITE';
 export type MediaType = 'IMAGE' | 'VIDEO';
 export type UserRole = 'GUEST' | 'OWNER' | 'ADMIN';
 
+// ==========================================
+// MEDIA (Immagini/Video)
+// ==========================================
 
-export interface MediaData {
-    id?: number; 
+// INPUT: Payload per caricare un file (POST /api/media)
+// Questo si usa sia per property/{id}/media che per rooms/{id}/media
+export interface MediaUpload {
     fileName: string;
     fileType: MediaType;
-    url?: string;
+    base64Data: string; 
+    description?: string;
 }
 
-export interface IAmenity {
-    getName(): string;
-    getCategory(): string;
-}
-
-export interface PropertyAmenityData extends IAmenity {
-    name: string;
-    category: string; // Es. "General", "Kitchen"
-}
-
-export interface RoomAmenityData extends IAmenity {
-    name: string;
-    category: string; // Es. "Bathroom", "Entertainment"
-}
-
-
-export interface RoomData {
+// OUTPUT: Oggetto visualizzato nel carosello
+export interface MediaData {
     id: string;
-    type: string;
-    description: string | null;
+    url: string;      // URL pubblico (S3)
+    type: MediaType;
+    description?: string;
+}
+
+// ==========================================
+// AMENITIES (Servizi)
+// ==========================================
+
+// Interfaccia Base (non esportata, serve solo per non ripetere codice)
+interface BaseAmenity {
+    id: string;
+    name: string;
+    category: string;
+    icon?: string;
+}
+
+// OUTPUT: Distinzione semantica
+// (Utile per Type Safety: non puoi passare una RoomAmenity dove serve una PropertyAmenity)
+// In futuro potrebbero avere campi diversi
+export interface PropertyAmenity extends BaseAmenity {}
+export interface RoomAmenity extends BaseAmenity {}
+
+// ==========================================
+// ROOMS
+// ==========================================
+
+// INPUT: Creazione/Modifica Stanza
+export interface RoomInput {
+    type: RoomType;
+    description?: string;
     price: number;
     capacity: number;
-    amenities: RoomAmenityData[];
-    media: MediaData[];
+    
+    // L'Owner seleziona ID dalla lista "Room Amenities"
+    amenity_ids: string[]; 
 }
 
-export interface PropertyData {
+// OUTPUT: Visualizzazione Stanza
+export interface RoomData extends Omit<RoomInput, 'amenity_ids'> {
     id: string;
+    
+    // Qui ricevi gli oggetti specifici per la stanza
+    amenities: RoomAmenity[];  
+    
+    // Ogni stanza ha le sue foto specifiche
+    media: MediaData[];        
+}
+
+// ==========================================
+// PROPERTIES
+// ==========================================
+
+// INPUT: Creazione/Modifica Proprietà
+export interface PropertyInput {
     name: string;
     address: string;
     city: string;
     country: string;
-    description: string | null;
-    status: string;
-    owner_id: string;
-    rooms: RoomData[];
-    amenities: PropertyAmenityData[];
-    media: MediaData[];
+    description: string;
+    
+    // L'Owner seleziona ID dalla lista "Property Amenities"
+    amenity_ids: string[]; 
 }
 
+// OUTPUT: Scheda completa per la UI
+export interface PropertyData extends Omit<PropertyInput, 'amenity_ids'> {
+    id: string;
+    status: PropertyStatus; 
+    owner_id: string;       
+    
+    // Liste popolate
+    amenities: PropertyAmenity[]; // Solo servizi generali della casa
+    rooms: RoomData[];            // Lista delle stanze
+    media: MediaData[];           // Foto generali della casa (facciata, piscina)
+}
+
+// ==========================================
+// USER & SEARCH
+// ==========================================
 
 export interface UserData {
-    id?: number;
-    name: string;
+    id: string;
     email: string;
-    password?: string;
-    token?: string;
-    role: UserRole;
+    role: string;    
 }
 
 export interface SearchCriteria {
@@ -72,5 +116,4 @@ export interface SearchCriteria {
     checkIn?: Date;
     checkOut?: Date;
     guests?: number;
-    
 }
