@@ -1,37 +1,43 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
-    import { auth } from '$lib/auth.svelte';
     import { page } from '$app/state';
+    
+    // 🔥 USIAMO LO STORE REATTIVO, NON L'API DIRETTA
+    import { auth } from '$lib/auth.svelte';
 
     let email = $state("");
     let password = $state("");
     let isLoading = $state(false);
     let errorMessage = $state("");
 
-    // Runa per gestire il messaggio di successo se arriviamo dal Signup
     let signupSuccess = $derived(page.url.searchParams.get('signup_success') === 'true');
 
-    // Auth Guard: se già loggato, vai in Dashboard
+    // Auth Guard Reattiva
     $effect(() => {
-        console.log("Login Page Auth Guard:", auth.isAuthenticated);
+        // Appena auth.isAuthenticated diventa true, reindirizza
         if (auth.isAuthenticated) goto('/owner/dashboard');
     });
 
     async function handleLogin() {
-        if (!email || !password) {
-            errorMessage = "Please enter both email and password.";
-            return;
-        }
+        if (!email || !password) return;
 
         isLoading = true;
         errorMessage = "";
+
         try {
-            // Simulazione login
-            await new Promise(r => setTimeout(r, 800));
-            auth.login({ email, role: 'OWNER' });
+            console.log("🚀 Logging in via AuthStore...");
+            
+            // CHIAMIAMO LO STORE
+            // Questo chiama l'API E aggiorna la variabile $state user
+            await auth.login(email, password);
+            
+            // Non serve goto qui se usiamo l'$effect sopra, 
+            // ma per sicurezza si può lasciare:
             await goto('/owner/dashboard');
-        } catch (err) {
-            errorMessage = "Invalid email or password.";
+
+        } catch (err: any) {
+            console.error("Login failed:", err);
+            errorMessage = "Login failed. Check credentials.";
         } finally {
             isLoading = false;
         }

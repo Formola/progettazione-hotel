@@ -3,8 +3,8 @@ import type { UserData } from '$lib/types';
 export interface AuthResponse {
     user: UserData;
     accessToken: string;
-    idToken?: string;
-    refreshToken?: string;
+    idToken: string;      // Fondamentale: contiene i claim dell'utente
+    refreshToken?: string; // Opzionale perché nel refresh a volte manca
 }
 
 export interface IAuthProvider {

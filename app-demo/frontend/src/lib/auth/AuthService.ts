@@ -1,4 +1,4 @@
-import type { IAuthProvider } from './IAuthProvider';
+import type { AuthResponse, IAuthProvider } from './IAuthProvider';
 import type { UserData } from '$lib/types';
 
 export class AuthService {
@@ -19,6 +19,7 @@ export class AuthService {
     // Login e Salvataggio
     async login(email: string, password: string): Promise<UserData> {
         const response = await this.provider.login(email, password);
+        console.log("Login response:", response);
         this.saveSession(response);
         return response.user;
     }
@@ -27,8 +28,7 @@ export class AuthService {
     async signup(user: UserData, password: string): Promise<UserData> {
         // Deleghiamo al provider (Cognito)
         const response = await this.provider.signup(user, password);
-        // Nota: Di solito il signup non fa login automatico (richiede conferma email),
-        // ma se lo facesse, potremmo salvare la sessione qui.
+        console.log(response.user);
         return response.user;
     }
 
@@ -87,12 +87,15 @@ export class AuthService {
     }
 
     // Helper privato per salvare tutto in un colpo solo
-    private saveSession(response: any) {
+    private saveSession(response: AuthResponse) {
+
         if (typeof localStorage === 'undefined') return;
 
+        // Salviamo i token grezzi (servono per le chiamate API)
         if (response.accessToken) localStorage.setItem(this.keys.ACCESS_TOKEN, response.accessToken);
         if (response.idToken) localStorage.setItem(this.keys.ID_TOKEN, response.idToken);
         if (response.refreshToken) localStorage.setItem(this.keys.REFRESH_TOKEN, response.refreshToken);
+        
         if (response.user) localStorage.setItem(this.keys.USER, JSON.stringify(response.user));
     }
 }

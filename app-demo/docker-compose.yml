@@ -18,7 +18,7 @@ services:
       - EXTENSION_AUTO_INSTALL=localstack-extension-terraform-init
 
       - DEBUG=${DEBUG:-0}
-      # - PERSISTENCE=1 # persist data to volume
+      - PERSISTENCE=1 # persist data to volume
       # - SERVICES=s3,ec2,elb,autoscaling,cloudwatch,rds,apigateway,cognito-idp,iam,route53,sts,sns,cognito,sesv2
       - DOCKER_HOST=unix:///var/run/docker.sock
       - EXTRA_CORS_ALLOWED_ORIGINS=*

@@ -20,6 +20,13 @@ resource "aws_cognito_user_pool" "main_pool" {
   }
 }
 
+resource "aws_cognito_user_group" "owners" {
+  name         = "OWNERS"
+  user_pool_id = aws_cognito_user_pool.main_pool.id
+  description  = "Group for Property Owners"
+  precedence   = 1
+}
+
 # User Pool Client
 # È "l'app" che ha il permesso di parlare con Cognito (es. app frontend).
 resource "aws_cognito_user_pool_client" "web_client" {

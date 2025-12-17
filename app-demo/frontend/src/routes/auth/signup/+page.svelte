@@ -1,29 +1,65 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
-    import { auth } from '$lib/auth.svelte';
+    // IMPORTO LA TUA NUOVA API
+    import { authApi } from '$lib/api/auth';
+    import type { UserData } from '$lib/types';
 
     let email = $state("");
     let password = $state("");
+    let name = $state("");
     let isLoading = $state(false);
     let errorMessage = $state("");
 
+    // Auth Guard
     $effect(() => {
-        if (auth.isAuthenticated) goto('/owner/dashboard');
+        // Controlliamo se siamo già loggati
+        if (authApi.isAuthenticated()) goto('/owner/dashboard');
     });
 
     async function handleSignup() {
         isLoading = true;
         errorMessage = "";
+        
+        // Creiamo l'oggetto utente
+        const userData: UserData = {
+            email: email,
+            id: "", // Lo imposteremo dopo la registrazione
+            role: "" // Lo imposteremo lato Cognito Gruppi
+        };
+
         try {
-            // Simulated registration
-            await new Promise(r => setTimeout(r, 1000));
+            console.log("🚀 Calling real Cognito Signup...");
+            
+            await authApi.signup(userData, password);
+            
+            console.log("✅ Signup successful!");
+            // Redirect al login con messaggio
             await goto('/auth/login?signup_success=true');
-        } catch (err) {
-            errorMessage = "Registration failed. Please try again.";
+
+        } catch (err: any) {
+            console.error("❌ Signup Error:", err);
+            // Mostriamo l'errore reale che arriva da Cognito/LocalStack
+            errorMessage = err.message || "Registration failed.";
         } finally {
             isLoading = false;
         }
     }
+
+    // Funzione di validazione locale che rispecchia le regole Cognito
+    function isPasswordValid(p: string) {
+        const hasUpperCase = /[A-Z]/.test(p);
+        const hasLowerCase = /[a-z]/.test(p);
+        const hasNumbers = /\d/.test(p);
+        const hasLength = p.length >= 8;
+        return hasUpperCase && hasLowerCase && hasNumbers && hasLength;
+    }
+
+    // Stato derivato per disabilitare il bottone
+    let canSubmit = $derived(
+        !isLoading && 
+        email.length > 0 && 
+        isPasswordValid(password)
+    );
 </script>
 
 <div class="auth-page">
@@ -31,7 +67,9 @@
         <h2 class="auth-title">Create Owner Account</h2>
         
         {#if errorMessage}
-            <div class="auth-error">{errorMessage}</div>
+            <div class="auth-error">
+                {errorMessage}
+            </div>
         {/if}
 
         <div class="auth-field">
@@ -41,33 +79,38 @@
                 type="email" 
                 bind:value={email} 
                 placeholder="e.g. alex@provider.com" 
-                class="auth-input"
+                class="auth-input block w-full border border-gray-300 rounded p-2"
             />
         </div>
 
-        <div class="auth-field">
+        <div class="auth-field mt-4">
             <label for="password">Password</label>
             <input 
                 id="password"
                 type="password" 
                 bind:value={password} 
-                placeholder="Minimum 8 characters" 
-                class="auth-input"
+                placeholder="Min 8 chars, 1 Upper, 1 Number" 
+                class="auth-input block w-full border border-gray-300 rounded p-2"
+                class:border-red-500={password.length > 0 && !isPasswordValid(password)}
             />
+            {#if password.length > 0 && !isPasswordValid(password)}
+                <p class="text-xs text-red-500 mt-1">
+                    Must verify: 8 chars, 1 Uppercase, 1 Number.
+                </p>
+            {/if}
         </div>
 
         <button 
-            class="auth-button" 
+            class="auth-button mt-6 w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" 
             onclick={handleSignup}
-            disabled={isLoading || !email || password.length < 8}
-            class:is-loading={isLoading}
+            disabled={!canSubmit} 
         >
-            Join as Owner
+            {isLoading ? 'Registering...' : 'Join as Owner'}
         </button>
         
-        <p class="auth-switch">
+        <p class="auth-switch mt-4 text-center text-sm">
             Already have an account? 
-            <a href="/auth/login">Log in here</a>
+            <a href="/auth/login" class="text-blue-600 underline">Log in here</a>
         </p>
     </div>
 </div>
@@ -89,6 +132,12 @@
         max-width: 440px;
         box-shadow: 0 20px 40px rgba(0,0,0,0.15);
         color: white;
+    }
+
+    .auth-error {
+        background: rgba(245, 101, 101, 0.15);
+        color: #feb2b2;
+        border-color: rgba(245, 101, 101, 0.3);
     }
 
     .auth-title {
@@ -166,13 +215,5 @@
         margin-left: 0.3rem;
     }
 
-    .auth-error {
-        background: rgba(245, 101, 101, 0.1);
-        color: #feb2b2;
-        padding: 0.75rem;
-        border-radius: 8px;
-        font-size: 0.85rem;
-        margin-bottom: 1.5rem;
-        border: 1px solid rgba(245, 101, 101, 0.2);
-    }
+
 </style>
