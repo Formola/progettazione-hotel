@@ -1012,3 +1012,19 @@ Linux invece esegue Docker direttamente sul kernel dell’host, senza una VM int
 In breve, su macOS la rete Docker è nascosta dentro una VM e l’host non può entrarci, mentre su Linux la rete Docker è parte del sistema operativo e quindi totalmente accessibile.
 
 Nel nostro caso con le ec2 di localstack lanciate in container docker, su macos non possiamo raggiungere le ec2 tramite il loro ip interno perchè la rete docker è dentro la VM di docker desktop e non è raggiungibile dal macos host. Su linux invece possiamo raggiungere le ec2 tramite il loro ip interno perchè la rete docker è parte del sistema operativo linux host. Possiamo comunque raggiungere le ec2 tramite il port mapping configurato da localstack (es. porta 22 per ssh oppure porta 8000 per un servizio), ovviamente sia per macos che per linux (vedi tutorial https://hashnode.localstack.cloud/running-an-ec2-instance-locally-using-localstack-and-aws-cli)
+
+
+
+1. capitolo introduttivo in cui speghiamo cosa vogliamo fare e obiettivi. iac e cloud
+2. stato dell arte. cosa abbiamo usato spiegazione. terraform ansible ecc, tutte le tecnologie. anche localstack.
+3. cap metodologie. trovato libro con app. spieghioamo la nostra arch e pattern e come useremo localstack. progettazione database. tutto uml.
+4. implementazione. facciamo anche vedere un po di codice tf, docker compose. solo cose fondamentali.
+5. risultati. descriviamo l'app funzionante
+6. conclusioni. cosa ho imparato dalla tesi, limitiazioni, cosa si puo migliorare. 
+
+finire flow principale demo app
+
+prova ansible ec2, carico app in ec2 con ansible. magari lo menzionaimo come sviluppo futuro.
+kubernetes al massimo menzioniamo solo ma non lo usiamo.
+design uml non per forza da scrivere preciso nelle due app.
+

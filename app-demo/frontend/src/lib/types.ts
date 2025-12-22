@@ -3,7 +3,7 @@
 // ==========================================
 export type PropertyStatus = 'DRAFT' | 'PUBLISHED' | 'INACTIVE';
 export type RoomType = 'SINGLE' | 'DOUBLE' | 'SUITE';
-export type MediaType = 'IMAGE' | 'VIDEO';
+export type MediaType = 'image/png' | 'video/mp4';
 export type UserRole = 'GUEST' | 'OWNER' | 'ADMIN';
 
 // ==========================================
@@ -22,10 +22,13 @@ export interface MediaUpload {
 // OUTPUT: Oggetto visualizzato nel carosello
 export interface MediaData {
     id: string;
-    url: string;      // URL pubblico (S3)
-    type: MediaType;
+    file_name?: string;
+    file_type?: MediaType;
+    storage_path: string; // URL diretto (come restituito da Python)
     description?: string;
+
 }
+
 
 // ==========================================
 // AMENITIES (Servizi)
@@ -91,7 +94,11 @@ export interface PropertyInput {
 export interface PropertyData extends Omit<PropertyInput, 'amenity_ids'> {
     id: string;
     status: PropertyStatus; 
-    owner_id: string;       
+    owner: {
+        id: string;
+        name: string;
+        email: string;
+    };       
     
     // Liste popolate
     amenities: PropertyAmenity[]; // Solo servizi generali della casa

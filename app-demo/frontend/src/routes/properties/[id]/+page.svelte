@@ -21,16 +21,17 @@
     
     // Gestione Immagini: Adattata al tipo 'Media'
     let displayImages = $derived.by(() => {
-        // Se abbiamo media reali nel DB, usiamo quelli
         if (property?.media && property.media.length > 0) {
-            return property.media.map(m => m.url || `https://placehold.co/1200x500?text=${encodeURIComponent(m.description || 'View')}`);
+            return property.media.map(
+                m => m.storage_path || `https://placehold.co/1200x500?text=${encodeURIComponent(m.description || 'View')}`
+            );
         }
-        // Fallback se non ci sono immagini
         return [
             "https://placehold.co/1200x500/ffffff/000000?text=Main+Property+Photo",
             "https://placehold.co/1200x500/ffffff/000000?text=Internal+Room+View"
         ];
     });
+
 
     function nextImage() { currentImageIndex = (currentImageIndex + 1) % displayImages.length; }
     function prevImage() { currentImageIndex = (currentImageIndex - 1 + displayImages.length) % displayImages.length; }
@@ -99,12 +100,8 @@
                             {#each property.amenities as amenity}
                                 <div class="column is-6-tablet is-12-mobile mb-2">
                                     <div class="is-flex is-align-items-center">
-                                        <span class="icon has-text-primary mr-3">
-                                            {#if amenity.icon}
-                                                <img src={amenity.icon} alt={amenity.name} style="width: 20px; height: 20px;">
-                                            {:else}
-                                                <i class="fas fa-check"></i>
-                                            {/if}
+                                        <span class="icon has-text-success mr-3">
+                                            ✅
                                         </span>
                                         <div>
                                             <p class="has-text-weight-bold has-text-black mb-0">
@@ -149,7 +146,7 @@
                                     {#if room.amenities && room.amenities.length > 0}
                                         <div class="tags mb-5">
                                             {#each room.amenities as amenity}
-                                                <span class="tag is-light is-rounded border-grey">
+                                                <span class="tag is-dark is-rounded border-grey">
                                                     {amenity.name}
                                                 </span>
                                             {/each}
@@ -172,15 +169,16 @@
                         <div class="box p-5 shadow-soft">
                             <p class="heading has-text-grey-darker has-text-weight-bold mb-4">Property Manager</p>
                             <div class="is-flex is-align-items-center mb-5">
-                                <div class="owner-avatar mr-3">
-                                    {property.owner_id ? property.owner_id.charAt(0).toUpperCase() : '?'}
-                                </div>
-                                <div style="overflow: hidden;">
-                                    <p class="has-text-weight-bold has-text-black is-size-7" style="white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
-                                        ID: {property.owner_id}
-                                    </p>
-                                    <p class="is-size-7 has-text-success">Verified Listing</p>
-                                </div>
+                            <div class="owner-avatar mr-3">
+                                {property.owner?.name ? property.owner.name.charAt(0).toUpperCase() : '?'}
+                            </div>
+                            <div style="overflow: hidden;">
+                                <p class="has-text-weight-bold has-text-black is-size-7" style="white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
+                                    {property.owner?.name}
+                                </p>
+                                <p class="is-size-7 has-text-grey">{property.owner?.email}</p>
+                            </div>
+
                             </div>
                             <button class="button is-dark is-fullwidth is-rounded has-text-weight-bold">
                                 Contact Host
@@ -213,7 +211,19 @@
         font-weight: bold; font-size: 1.2rem;
     }
     
-    .carousel-container { height: 400px; position: relative; }
+.carousel-container {
+    position: relative;
+    width: 100%;
+    border-radius: 12px;
+}
+.carousel-container img {
+    width: 100%;
+    height: auto; 
+    object-fit: contain; 
+    border-radius: 12px;
+    display: block; 
+}
+
     .carousel-img { width: 100%; height: 100%; object-fit: cover; }
     .image-counter { position: absolute; bottom: 15px; right: 15px; }
     

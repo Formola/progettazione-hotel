@@ -1,7 +1,7 @@
 <script lang="ts">
 	import {goto} from '$app/navigation';
 	import {selectedProperty} from '$lib/stores/selection';
-    import type { PropertyData, RoomData } from '$lib/types';
+    import type { MediaData, PropertyData, RoomData } from '$lib/types';
 
     let { property } = $props<{ property: PropertyData }>();
 
@@ -27,9 +27,13 @@
     <div class="card-image">
         <figure class="image is-4by3">
             <img
-                src={property.mainImage || 'https://bulma.io/images/placeholders/1280x960.png'}
+                src={property.media?.find((m: MediaData) => m.file_type?.startsWith('image'))?.storage_path
+                    || 'https://bulma.io/images/placeholders/1280x960.png'}
                 alt={property.name}
             />
+
+
+
             </figure>
     </div>
     
@@ -100,6 +104,8 @@
     .card-image img {
         object-fit: cover;
     }
+
+    
 
     .has-background-dark {
         background-color: #121417 !important; /* */
