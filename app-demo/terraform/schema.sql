@@ -184,122 +184,325 @@ CREATE INDEX idx_room_amenities_link_rid ON room_amenities_link(room_id);
 
 
 -- ========================================================
--- SEED: UTENTE + 10 HOTEL CON STANZE E AMENITIES
+-- SEED: UTENTE + 10 HOTEL CON STANZE E AMENITIES COMPLETE
 -- ========================================================
 
--- Creiamo un utente
 INSERT INTO users (id, cognito_uuid, name, email) 
-VALUES ('user_01', 'cog_12345', 'Mario Rossi', 'mario@example.com')
+VALUES ('user_01', 'cog_12345', 'Jack Torrance', 'jacktorrance@shining.com')
 ON CONFLICT (id) DO NOTHING;
 
--- Amenities property (predefinite)
-INSERT INTO property_amenities (id, name, category) VALUES
-('am_wifi', 'Free WiFi', 'Generale'),
-('am_pool', 'Piscina', 'Generale'),
-('am_parking', 'Parcheggio', 'Generale')
+-- ==========================================
+-- PROPERTY AMENITIES (10 essenziali)
+-- ==========================================
+
+INSERT INTO property_amenities (id, name, category, description) VALUES
+('pa_wifi', 'Free WiFi', 'Generale', 'High-speed wireless internet access throughout the property'),
+('pa_pool', 'Pool', 'Generale', 'Outdoor or indoor swimming pool available for guests'),
+('pa_parking', 'Parking', 'Generale', 'Free parking facilities on-site or nearby'),
+('pa_gym', 'Gym', 'Fitness & Wellness', 'Fully equipped fitness center with modern equipment'),
+('pa_spa', 'Spa & Wellness', 'Fitness & Wellness', 'Spa facilities including massage and wellness treatments'),
+('pa_restaurant', 'Restaurant', 'Ristorazione', 'On-site restaurant serving breakfast, lunch, and dinner'),
+('pa_bar', 'Bar', 'Ristorazione', 'Bar or lounge area serving drinks and light snacks'),
+('pa_beach', 'Beach Access', 'Outdoor', 'Direct beach access or beach shuttle service'),
+('pa_pets', 'Pet-Friendly', 'Servizi', 'Pets are welcome with additional fees'),
+('pa_reception24', 'Reception 24h', 'Servizi', '24-hour front desk service and concierge')
 ON CONFLICT (id) DO NOTHING;
 
--- Amenities room
-INSERT INTO room_amenities (id, name, category) VALUES
-('ra_tv', 'TV', 'Comfort'),
-('ra_hairdryer', 'Asciugacapelli', 'Comfort'),
-('ra_minibar', 'Minibar', 'Comfort')
+-- ==========================================
+-- ROOM AMENITIES (6 essenziali)
+-- ==========================================
+
+INSERT INTO room_amenities (id, name, category, description) VALUES
+('ra_ac', 'Air Conditioning', 'Comfort', 'Individual climate control in each room'),
+('ra_tv', 'Satellite TV', 'Entertainment', 'Flat-screen TV with satellite or cable channels'),
+('ra_hairdryer', 'Hairdryer', 'Bathroom', 'Hairdryer available in the bathroom'),
+('ra_minibar', 'Minibar', 'Comfort', 'Mini refrigerator stocked with beverages and snacks'),
+('ra_safe', 'Safe', 'Security', 'In-room safe for valuables'),
+('ra_balcony', 'Balcony/View', 'View & Space', 'Private balcony or room with scenic view')
 ON CONFLICT (id) DO NOTHING;
 
--- Creazione
-INSERT INTO properties (id, owner_id, name, address, city, country, status)
+-- ==========================================
+-- PROPERTIES (10 Hotel)
+-- ==========================================
+
+INSERT INTO properties (id, owner_id, name, address, city, country, status, description)
 VALUES
-('prop_01', 'user_01', 'Dragonfly Inn', '123 Main St', 'Stars Hollow', 'USA', 'PUBLISHED'),
-('prop_02', 'user_01', 'Bates Motel', '12 Highway 90', 'Fairvale', 'USA', 'PUBLISHED'),     
-('prop_03', 'user_01', 'Overlook Hotel', 'Room 237 Rd', 'Sidewinder', 'USA', 'PUBLISHED'),   
-('prop_04', 'user_01', 'Continental Hotel', '1 Assassin St', 'New York', 'USA', 'PUBLISHED'), 
-('prop_05', 'user_01', 'Hotel California', '42 Sunset Blvd', 'Los Angeles', 'USA', 'PUBLISHED'),
-('prop_06', 'user_01', 'Grand Budapest', '1 Zubrowka Ln', 'Zubrowka', 'Fictional', 'PUBLISHED'),
-('prop_07', 'user_01', 'The Great Northern', '500 Twin Peaks Rd', 'Twin Peaks', 'USA', 'PUBLISHED'), 
-('prop_08', 'user_01', 'Beverly Hills Hotel', '9641 Sunset Blvd', 'Los Angeles', 'USA', 'PUBLISHED'), 
-('prop_09', 'user_01', 'Raddison Blue', '10 Central St', 'Paris', 'France', 'PUBLISHED'), 
-('prop_10', 'user_01', 'Plaza Hotel', '768 5th Ave', 'New York', 'USA', 'PUBLISHED')
+('prop_01', 'user_01', 'Dragonfly Inn', '123 Main St', 'Stars Hollow', 'USA', 'PUBLISHED', 'A cozy inn with a rustic charm. Gilmore Girls fans welcome!'),
+('prop_02', 'user_01', 'Bates Motel', '12 Highway 90', 'Fairvale', 'USA', 'PUBLISHED', 'A quaint motel with a mysterious past. Psycho fans welcome!'),     
+('prop_03', 'user_01', 'Overlook Hotel', 'Room 237 Rd', 'Sidewinder', 'USA', 'PUBLISHED', 'A grand hotel with a haunting history. The Shining fans welcome!'),   
+('prop_04', 'user_01', 'Continental Hotel', '1 Assassin St', 'New York', 'USA', 'PUBLISHED', 'A luxurious hotel catering to elite guests. John Wick fans welcome!'), 
+('prop_05', 'user_01', 'Hotel California', '42 Sunset Blvd', 'Los Angeles', 'USA', 'PUBLISHED', 'You can check out any time you like, but you can never leave. Eagles fans welcome!'),
+('prop_06', 'user_01', 'Grand Budapest', '1 Zubrowka Ln', 'Zubrowka', 'Fictional', 'PUBLISHED', 'A legendary hotel in a fictional European country. Wes Anderson fans welcome!'),
+('prop_07', 'user_01', 'The Great Northern', '500 Twin Peaks Rd', 'Twin Peaks', 'USA', 'PUBLISHED', 'A cozy mountain lodge with a mysterious atmosphere. Twin Peaks fans welcome!'), 
+('prop_08', 'user_01', 'Beverly Hills Hotel', '9641 Sunset Blvd', 'Los Angeles', 'USA', 'PUBLISHED', 'A glamorous hotel known for its celebrity guests. A place to see and be seen.'), 
+('prop_09', 'user_01', 'Radisson Blue', '10 Central St', 'Paris', 'France', 'PUBLISHED', 'A stylish hotel in the heart of Paris. Experience luxury and comfort.'), 
+('prop_10', 'user_01', 'Plaza Hotel', '768 5th Ave', 'New York', 'USA', 'PUBLISHED', 'An iconic hotel located in the heart of New York City. Experience elegance and sophistication.')
 ON CONFLICT (id) DO NOTHING;
 
--- Collegamento amenities property (tutti hotel: Wifi + Pool)
+-- ==========================================
+-- COLLEGAMENTO PROPERTY AMENITIES
+-- ==========================================
+
+-- prop_01: Dragonfly Inn (Cozy inn) → WiFi, Parking, Restaurant, Reception
 INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
-('prop_01','am_wifi'),('prop_01','am_pool'),
-('prop_02','am_wifi'),('prop_02','am_pool'),
-('prop_03','am_wifi'),('prop_03','am_pool'),
-('prop_04','am_wifi'),('prop_04','am_pool'),
-('prop_05','am_wifi'),('prop_05','am_pool'),
-('prop_06','am_wifi'),('prop_06','am_pool'),
-('prop_07','am_wifi'),('prop_07','am_pool'),
-('prop_08','am_wifi'),('prop_08','am_pool'),
-('prop_09','am_wifi'),('prop_09','am_pool'),
-('prop_10','am_wifi'),('prop_10','am_pool')
+('prop_01', 'pa_wifi'),
+('prop_01', 'pa_parking'),
+('prop_01', 'pa_restaurant'),
+('prop_01', 'pa_reception24')
 ON CONFLICT (property_id, amenity_id) DO NOTHING;
 
--- Stanze per ogni hotel (1–3 stanze diverse)
-INSERT INTO rooms (id, property_id, type, price, capacity)
+-- prop_02: Bates Motel (Budget motel) → WiFi, Parking
+INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
+('prop_02', 'pa_wifi'),
+('prop_02', 'pa_parking')
+ON CONFLICT (property_id, amenity_id) DO NOTHING;
+
+-- prop_03: Overlook Hotel (Grand hotel) → WiFi, Pool, Gym, Restaurant, Bar, Reception
+INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
+('prop_03', 'pa_wifi'),
+('prop_03', 'pa_pool'),
+('prop_03', 'pa_gym'),
+('prop_03', 'pa_restaurant'),
+('prop_03', 'pa_bar'),
+('prop_03', 'pa_reception24')
+ON CONFLICT (property_id, amenity_id) DO NOTHING;
+
+-- prop_04: Continental Hotel (Luxury) → ALL amenities except Beach
+INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
+('prop_04', 'pa_wifi'),
+('prop_04', 'pa_pool'),
+('prop_04', 'pa_parking'),
+('prop_04', 'pa_gym'),
+('prop_04', 'pa_spa'),
+('prop_04', 'pa_restaurant'),
+('prop_04', 'pa_bar'),
+('prop_04', 'pa_pets'),
+('prop_04', 'pa_reception24')
+ON CONFLICT (property_id, amenity_id) DO NOTHING;
+
+-- prop_05: Hotel California → WiFi, Pool, Bar, Parking
+INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
+('prop_05', 'pa_wifi'),
+('prop_05', 'pa_pool'),
+('prop_05', 'pa_bar'),
+('prop_05', 'pa_parking')
+ON CONFLICT (property_id, amenity_id) DO NOTHING;
+
+-- prop_06: Grand Budapest (Elegant) → WiFi, Restaurant, Bar, Reception, Spa
+INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
+('prop_06', 'pa_wifi'),
+('prop_06', 'pa_restaurant'),
+('prop_06', 'pa_bar'),
+('prop_06', 'pa_reception24'),
+('prop_06', 'pa_spa')
+ON CONFLICT (property_id, amenity_id) DO NOTHING;
+
+-- prop_07: The Great Northern (Mountain lodge) → WiFi, Restaurant, Bar, Parking
+INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
+('prop_07', 'pa_wifi'),
+('prop_07', 'pa_restaurant'),
+('prop_07', 'pa_bar'),
+('prop_07', 'pa_parking')
+ON CONFLICT (property_id, amenity_id) DO NOTHING;
+
+-- prop_08: Beverly Hills Hotel (Glamorous) → ALL amenities except Beach
+INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
+('prop_08', 'pa_wifi'),
+('prop_08', 'pa_pool'),
+('prop_08', 'pa_parking'),
+('prop_08', 'pa_gym'),
+('prop_08', 'pa_spa'),
+('prop_08', 'pa_restaurant'),
+('prop_08', 'pa_bar'),
+('prop_08', 'pa_pets'),
+('prop_08', 'pa_reception24')
+ON CONFLICT (property_id, amenity_id) DO NOTHING;
+
+-- prop_09: Radisson Blue Paris (Modern) → WiFi, Gym, Restaurant, Bar, Reception
+INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
+('prop_09', 'pa_wifi'),
+('prop_09', 'pa_gym'),
+('prop_09', 'pa_restaurant'),
+('prop_09', 'pa_bar'),
+('prop_09', 'pa_reception24')
+ON CONFLICT (property_id, amenity_id) DO NOTHING;
+
+-- prop_10: Plaza Hotel (Iconic luxury) → ALL amenities except Beach and Pets
+INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
+('prop_10', 'pa_wifi'),
+('prop_10', 'pa_pool'),
+('prop_10', 'pa_parking'),
+('prop_10', 'pa_gym'),
+('prop_10', 'pa_spa'),
+('prop_10', 'pa_restaurant'),
+('prop_10', 'pa_bar'),
+('prop_10', 'pa_reception24')
+ON CONFLICT (property_id, amenity_id) DO NOTHING;
+
+-- ==========================================
+-- ROOMS (Stanze per ogni hotel)
+-- ==========================================
+
+INSERT INTO rooms (id, property_id, type, price, capacity, description)
 VALUES
-('room_01_1','prop_01','Singola',100.00,1),
-('room_01_2','prop_01','Doppia',150.00,2),
-('room_01_3','prop_01','Suite',250.00,4),
+-- Dragonfly Inn (3 stanze)
+('room_01_1','prop_01','Singola',100.00,1, 'Cozy single room with all basic amenities.'),
+('room_01_2','prop_01','Doppia',150.00,2, 'Comfortable double room with modern facilities.'),
+('room_01_3','prop_01','Suite',250.00,4, 'Spacious suite with premium amenities.'),
 
-('room_02_1','prop_02','Doppia',130.00,2),
-('room_02_2','prop_02','Suite',220.00,3),
+-- Bates Motel (2 stanze)
+('room_02_1','prop_02','Doppia',130.00,2, 'Comfortable double room with modern facilities.'),
+('room_02_2','prop_02','Suite',220.00,3, 'Spacious suite with premium amenities.'),
 
-('room_03_1','prop_03','Singola',90.00,1),
-('room_03_2','prop_03','Doppia',140.00,2),
+-- Overlook Hotel (2 stanze)
+('room_03_1','prop_03','Singola',90.00,1, 'Cozy single room with all basic amenities.'),
+('room_03_2','prop_03','Doppia',140.00,2, 'Comfortable double room with modern facilities.'),
 
-('room_04_1','prop_04','Suite',200.00,3),
+-- Continental Hotel (1 suite luxury)
+('room_04_1','prop_04','Suite',200.00,3, 'Spacious suite with premium amenities.'),
 
-('room_05_1','prop_05','Singola',120.00,1),
-('room_05_2','prop_05','Doppia',170.00,2),
+-- Hotel California (2 stanze)
+('room_05_1','prop_05','Singola',120.00,1, 'Cozy single room with all basic amenities.'),
+('room_05_2','prop_05','Doppia',170.00,2, 'Comfortable double room with modern facilities.'),
 
-('room_06_1','prop_06','Doppia',160.00,2),
-('room_06_2','prop_06','Suite',280.00,4),
+-- Grand Budapest (2 stanze)
+('room_06_1','prop_06','Doppia',160.00,2, 'Comfortable double room with modern facilities.'),
+('room_06_2','prop_06','Suite',280.00,4, 'Spacious suite with premium amenities.'),
 
-('room_07_1','prop_07','Singola',95.00,1),
-('room_07_2','prop_07','Doppia',155.00,2),
-('room_07_3','prop_07','Suite',260.00,3),
+-- The Great Northern (3 stanze)
+('room_07_1','prop_07','Singola',95.00,1, 'Cozy single room with all basic amenities.'),
+('room_07_2','prop_07','Doppia',155.00,2, 'Comfortable double room with modern facilities.'),
+('room_07_3','prop_07','Suite',260.00,3, 'Spacious suite with premium amenities.'),
 
-('room_08_1','prop_08','Doppia',180.00,2),
+-- Beverly Hills Hotel (1 doppia)
+('room_08_1','prop_08','Doppia',180.00,2, 'Comfortable double room with modern facilities.'),
 
-('room_09_1','prop_09','Singola',80.00,1),
-('room_09_2','prop_09','Doppia',130.00,2),
+-- Radisson Blue (2 stanze)
+('room_09_1','prop_09','Singola',80.00,1, 'Cozy single room with all basic amenities.'),
+('room_09_2','prop_09','Doppia',130.00,2, 'Comfortable double room with modern facilities.'),
 
-('room_10_1','prop_10','Suite',300.00,4)
+-- Plaza Hotel (1 suite luxury)
+('room_10_1','prop_10','Suite',300.00,4, 'Spacious suite with premium amenities.')
 ON CONFLICT (id) DO NOTHING;
 
--- Collegamento amenities room (TV + Hairdryer)
+-- ==========================================
+-- COLLEGAMENTO ROOM AMENITIES
+-- ==========================================
+
+-- Stanze SINGOLE → Base amenities (AC, TV, Hairdryer)
 INSERT INTO room_amenities_link (room_id, amenity_id) VALUES
-('room_01_1','ra_tv'),('room_01_1','ra_hairdryer'),
-('room_01_2','ra_tv'),('room_01_2','ra_hairdryer'),
-('room_01_3','ra_tv'),('room_01_3','ra_hairdryer'),
+('room_01_1', 'ra_ac'),
+('room_01_1', 'ra_tv'),
+('room_01_1', 'ra_hairdryer'),
 
-('room_02_1','ra_tv'),('room_02_1','ra_hairdryer'),
-('room_02_2','ra_tv'),('room_02_2','ra_hairdryer'),
+('room_03_1', 'ra_ac'),
+('room_03_1', 'ra_tv'),
+('room_03_1', 'ra_hairdryer'),
 
-('room_03_1','ra_tv'),('room_03_1','ra_hairdryer'),
-('room_03_2','ra_tv'),('room_03_2','ra_hairdryer'),
+('room_05_1', 'ra_ac'),
+('room_05_1', 'ra_tv'),
+('room_05_1', 'ra_hairdryer'),
 
-('room_04_1','ra_tv'),('room_04_1','ra_hairdryer'),
+('room_07_1', 'ra_ac'),
+('room_07_1', 'ra_tv'),
+('room_07_1', 'ra_hairdryer'),
 
-('room_05_1','ra_tv'),('room_05_1','ra_hairdryer'),
-('room_05_2','ra_tv'),('room_05_2','ra_hairdryer'),
-
-('room_06_1','ra_tv'),('room_06_1','ra_hairdryer'),
-('room_06_2','ra_tv'),('room_06_2','ra_hairdryer'),
-
-('room_07_1','ra_tv'),('room_07_1','ra_hairdryer'),
-('room_07_2','ra_tv'),('room_07_2','ra_hairdryer'),
-('room_07_3','ra_tv'),('room_07_3','ra_hairdryer'),
-
-('room_08_1','ra_tv'),('room_08_1','ra_hairdryer'),
-
-('room_09_1','ra_tv'),('room_09_1','ra_hairdryer'),
-('room_09_2','ra_tv'),('room_09_2','ra_hairdryer'),
-
-('room_10_1','ra_tv'),('room_10_1','ra_hairdryer')
+('room_09_1', 'ra_ac'),
+('room_09_1', 'ra_tv'),
+('room_09_1', 'ra_hairdryer')
 ON CONFLICT (room_id, amenity_id) DO NOTHING;
 
+-- Stanze DOPPIE → Base + Minibar
+INSERT INTO room_amenities_link (room_id, amenity_id) VALUES
+('room_01_2', 'ra_ac'),
+('room_01_2', 'ra_tv'),
+('room_01_2', 'ra_hairdryer'),
+('room_01_2', 'ra_minibar'),
+
+('room_02_1', 'ra_ac'),
+('room_02_1', 'ra_tv'),
+('room_02_1', 'ra_hairdryer'),
+('room_02_1', 'ra_minibar'),
+
+('room_03_2', 'ra_ac'),
+('room_03_2', 'ra_tv'),
+('room_03_2', 'ra_hairdryer'),
+('room_03_2', 'ra_minibar'),
+
+('room_05_2', 'ra_ac'),
+('room_05_2', 'ra_tv'),
+('room_05_2', 'ra_hairdryer'),
+('room_05_2', 'ra_minibar'),
+
+('room_06_1', 'ra_ac'),
+('room_06_1', 'ra_tv'),
+('room_06_1', 'ra_hairdryer'),
+('room_06_1', 'ra_minibar'),
+
+('room_07_2', 'ra_ac'),
+('room_07_2', 'ra_tv'),
+('room_07_2', 'ra_hairdryer'),
+('room_07_2', 'ra_minibar'),
+
+('room_08_1', 'ra_ac'),
+('room_08_1', 'ra_tv'),
+('room_08_1', 'ra_hairdryer'),
+('room_08_1', 'ra_minibar'),
+
+('room_09_2', 'ra_ac'),
+('room_09_2', 'ra_tv'),
+('room_09_2', 'ra_hairdryer'),
+('room_09_2', 'ra_minibar')
+ON CONFLICT (room_id, amenity_id) DO NOTHING;
+
+-- Stanze SUITE → ALL amenities
+INSERT INTO room_amenities_link (room_id, amenity_id) VALUES
+('room_01_3', 'ra_ac'),
+('room_01_3', 'ra_tv'),
+('room_01_3', 'ra_hairdryer'),
+('room_01_3', 'ra_minibar'),
+('room_01_3', 'ra_safe'),
+('room_01_3', 'ra_balcony'),
+
+('room_02_2', 'ra_ac'),
+('room_02_2', 'ra_tv'),
+('room_02_2', 'ra_hairdryer'),
+('room_02_2', 'ra_minibar'),
+('room_02_2', 'ra_safe'),
+('room_02_2', 'ra_balcony'),
+
+('room_04_1', 'ra_ac'),
+('room_04_1', 'ra_tv'),
+('room_04_1', 'ra_hairdryer'),
+('room_04_1', 'ra_minibar'),
+('room_04_1', 'ra_safe'),
+('room_04_1', 'ra_balcony'),
+
+('room_06_2', 'ra_ac'),
+('room_06_2', 'ra_tv'),
+('room_06_2', 'ra_hairdryer'),
+('room_06_2', 'ra_minibar'),
+('room_06_2', 'ra_safe'),
+('room_06_2', 'ra_balcony'),
+
+('room_07_3', 'ra_ac'),
+('room_07_3', 'ra_tv'),
+('room_07_3', 'ra_hairdryer'),
+('room_07_3', 'ra_minibar'),
+('room_07_3', 'ra_safe'),
+('room_07_3', 'ra_balcony'),
+
+('room_10_1', 'ra_ac'),
+('room_10_1', 'ra_tv'),
+('room_10_1', 'ra_hairdryer'),
+('room_10_1', 'ra_minibar'),
+('room_10_1', 'ra_safe'),
+('room_10_1', 'ra_balcony')
+ON CONFLICT (room_id, amenity_id) DO NOTHING;
+
+-- ==========================================
+-- MEDIA (property e qualche di seed)
+-- ==========================================
 
 INSERT INTO media (id, property_id, room_id, file_name, file_type, storage_path)
 VALUES
