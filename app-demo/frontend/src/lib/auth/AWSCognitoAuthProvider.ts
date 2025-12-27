@@ -114,6 +114,9 @@ export class AWSCognitoAuthProvider implements IAuthProvider {
         // set user.role
         user.role = "OWNER";
 
+        // recuperiamo cognito sub
+        user.id = ""; // lo aggiorniamo dopo il login
+
         return { user, accessToken: "", idToken: "" }; // Non facciamo login automatico dopo il signup
     }
 
@@ -158,9 +161,9 @@ export class AWSCognitoAuthProvider implements IAuthProvider {
 
         return {
             user: realUser,
-            accessToken: result.AccessToken,
-            idToken: result.IdToken,
-            refreshToken: result.RefreshToken
+            accessToken: result.AccessToken, // jwt
+            idToken: result.IdToken, // jwt
+            refreshToken: result.RefreshToken // string token
         };
     }
 }

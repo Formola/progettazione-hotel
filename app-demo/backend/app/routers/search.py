@@ -1,30 +1,34 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.params import Header
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 from app.config import settings
+from app.dependencies import UserContext, get_optional_user
+from sqlalchemy.orm import sessionmaker
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
 engine = create_engine(settings.DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():
-    from sqlalchemy.orm import sessionmaker
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-
+        
 
 @router.get("/")
-def search(location: str | None = Query(None), db: Session = Depends(get_db)):
+def search(location: str | None = Query(None), db: Session = Depends(get_db)
+        ):
     try:
         BASE_LIMIT = 20
         SEARCH_LIMIT = 50
 
         # -----------------------------
-        # 1️⃣ Properties + Owner info
+        # Properties + Owner info
         # -----------------------------
         sql_hotels = """
             SELECT p.id, p.name, p.address, p.city, p.country, p.description, p.created_at,
@@ -42,7 +46,7 @@ def search(location: str | None = Query(None), db: Session = Depends(get_db)):
                     params["loc"] = f"{location}%"
                 else:
                     params["loc"] = f"%{location}%"
-                sql_hotels += " AND (p.city ILIKE :loc OR p.name ILIKE :loc)"
+                sql_hotels += " AND (p.city ILIKE :loc OR p.name ILIKE :loc OR p.address ILIKE :loc OR p.country ILIKE :loc OR p.description ILIKE :loc)"
             sql_hotels += " ORDER BY p.created_at DESC LIMIT :limit"
             params["limit"] = SEARCH_LIMIT
         else:
@@ -56,7 +60,7 @@ def search(location: str | None = Query(None), db: Session = Depends(get_db)):
         hotel_ids = [h["id"] for h in hotels]
 
         # -----------------------------
-        # 2️⃣ Rooms
+        # Rooms
         # -----------------------------
         sql_rooms = """
             SELECT id, property_id, type, description, price, capacity, is_available, created_at
@@ -66,7 +70,7 @@ def search(location: str | None = Query(None), db: Session = Depends(get_db)):
         rooms = db.execute(text(sql_rooms), {"hotel_ids": hotel_ids}).mappings().all()
 
         # -----------------------------
-        # 3️⃣ Media
+        # Media
         # -----------------------------
         sql_media = """
             SELECT id, property_id, file_name, file_type, storage_path, description, inserted_at
@@ -76,7 +80,7 @@ def search(location: str | None = Query(None), db: Session = Depends(get_db)):
         media = db.execute(text(sql_media), {"hotel_ids": hotel_ids}).mappings().all()
 
         # -----------------------------
-        # 4️⃣ Property amenities
+        # Property amenities
         # -----------------------------
         sql_h_amenities = """
             SELECT l.property_id, a.name, a.category
@@ -87,7 +91,7 @@ def search(location: str | None = Query(None), db: Session = Depends(get_db)):
         h_amenities = db.execute(text(sql_h_amenities), {"hotel_ids": hotel_ids}).mappings().all()
 
         # -----------------------------
-        # 5️⃣ Room amenities
+        # Room amenities
         # -----------------------------
         room_ids = [r["id"] for r in rooms]
         r_amenities = []
@@ -101,7 +105,7 @@ def search(location: str | None = Query(None), db: Session = Depends(get_db)):
             r_amenities = db.execute(text(sql_r_amenities), {"room_ids": room_ids}).mappings().all()
 
         # -----------------------------
-        # 6️⃣ Assemblaggio dati
+        # Data assembly
         # -----------------------------
         hotels_map = {}
         for h in hotels:

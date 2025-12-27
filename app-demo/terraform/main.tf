@@ -68,6 +68,9 @@ PUBLIC_COGNITO_ISSUER_URL=https://cognito-idp.${var.aws_region}.amazonaws.com/${
 PUBLIC_AWS_REGION=us-east-1
 PUBLIC_COGNITO_ENDPOINT=http://localhost:4566
 
+# --- API GATEWAY (Browser -> Localhost) ---
+PUBLIC_API_GATEWAY_ENDPOINT=${aws_apigatewayv2_api.main_api.api_endpoint}
+
 # --- CONFIGURAZIONE BACKEND (Container -> Container) ---
 AWS_ENDPOINT_URL=http://localstack:4566
 AWS_REGION=us-east-1

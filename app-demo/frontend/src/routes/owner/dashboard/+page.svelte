@@ -10,6 +10,9 @@
     // Auth Guard: se non autenticato, rimanda al login
     $effect(() => {
         console.log("Owner Dashboard Auth Guard:", auth.isAuthenticated);
+        console.log("user data:", auth.user);
+        console.log("user role:", auth.user?.role);
+
         if (!auth.isAuthenticated) goto('/');
         
     });

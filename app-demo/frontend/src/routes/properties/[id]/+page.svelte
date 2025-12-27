@@ -1,248 +1,370 @@
 <script lang="ts">
-    import { onDestroy } from 'svelte';
-    import { goto } from '$app/navigation';
-    import type { PropertyData } from '$lib/types'; 
-    import { selectedProperty } from '$lib/stores/selection';
+	import { onDestroy } from 'svelte';
+	import { goto } from '$app/navigation';
+	import type { PropertyData } from '$lib/types';
+	import { selectedProperty } from '$lib/stores/selection';
+	import { getPropertyAmenityIcon, getRoomAmenityIcon } from '$lib/utils/icons';
 
-    // Usiamo lo State di Svelte 5
-    let property = $state<PropertyData | null>(null);
+	let property = $state<PropertyData | null>(null);
 
-    // Recupero dati dallo store
-    const unsubscribe = selectedProperty.subscribe(value => {
-        property = value;
-    });
+	const unsubscribe = selectedProperty.subscribe((value) => {
+		property = value;
+	});
 
-    // Debug: ispeziona l'oggetto PropertyData completo
-    $inspect(property);
+	onDestroy(unsubscribe);
 
-    onDestroy(unsubscribe);
+	let currentImageIndex = $state(0);
+	let carouselWidth = $state(0);
+	let carouselHeight = $state(0);
 
-    let currentImageIndex = $state(0);
-    
-    // Gestione Immagini: Adattata al tipo 'Media'
-    let displayImages = $derived.by(() => {
-        if (property?.media && property.media.length > 0) {
-            return property.media.map(
-                m => m.storage_path || `https://placehold.co/1200x500?text=${encodeURIComponent(m.description || 'View')}`
-            );
-        }
-        return [
-            "https://placehold.co/1200x500/ffffff/000000?text=Main+Property+Photo",
-            "https://placehold.co/1200x500/ffffff/000000?text=Internal+Room+View"
-        ];
-    });
+	let displayImages = $derived.by(() => {
+		if (property?.media && property.media.length > 0) {
+			return property.media.map(
+				(m) =>
+					m.storage_path ||
+					`https://placehold.co/1200x500?text=${encodeURIComponent(m.description || 'View')}`
+			);
+		}
+		return [
+			'https://placehold.co/1200x500/ffffff/000000?text=Main+Property+Photo',
+			'https://placehold.co/1200x500/ffffff/000000?text=Internal+Room+View'
+		];
+	});
 
+	function nextImage() {
+		currentImageIndex = (currentImageIndex + 1) % displayImages.length;
+	}
 
-    function nextImage() { currentImageIndex = (currentImageIndex + 1) % displayImages.length; }
-    function prevImage() { currentImageIndex = (currentImageIndex - 1 + displayImages.length) % displayImages.length; }
+	function prevImage() {
+		currentImageIndex = (currentImageIndex - 1 + displayImages.length) % displayImages.length;
+	}
+
+	function onImageLoad(e: Event) {
+		const img = e.target as HTMLImageElement;
+		const maxWidth = window.innerWidth * 0.9; // max 90% della finestra
+		const maxHeight = window.innerHeight * 0.7; // max 70% della finestra
+		const scale = Math.min(maxWidth / img.naturalWidth, maxHeight / img.naturalHeight, 1);
+		carouselWidth = img.naturalWidth * scale;
+		carouselHeight = img.naturalHeight * scale;
+	}
 </script>
 
 <nav class="has-background-white border-bottom py-3 is-sticky">
-    <div class="container is-max-desktop px-3">
-        <button class="button is-ghost has-text-black p-0" onclick={() => history.back()}>
-            <span class="icon">←</span> <span class="has-text-weight-bold">Back to results</span>
-        </button>
-    </div>
+	<div class="container is-max-desktop px-3">
+		<button class="button is-ghost has-text-black p-0" onclick={() => history.back()}>
+			<span class="icon">←</span> <span class="has-text-weight-bold">Back to results</span>
+		</button>
+	</div>
 </nav>
 
 {#if !property}
-    <main class="section has-background-white-bis" style="min-height: 100vh;">
-        <div class="container is-max-desktop has-text-centered">
-            <div class="box shadow-soft">
-                <h2 class="title is-4">Property not found in memory.</h2>
-                <button class="button is-primary is-rounded" onclick={() => goto('/search')}>Back to Search</button>
-            </div>
-        </div>
-    </main>
+	<main class="section has-background-white-bis" style="min-height: 100vh;">
+		<div class="container is-max-desktop has-text-centered">
+			<div class="box shadow-soft">
+				<h2 class="title is-4">Property not found in memory.</h2>
+				<button class="button is-primary is-rounded" onclick={() => goto('/search')}>
+					Back to Search
+				</button>
+			</div>
+		</div>
+	</main>
 {:else}
-    <main class="section has-background-white-bis" style="min-height: 100vh;">
-        <div class="container is-max-desktop">
-            
-            <div class="mb-5">
-                <h1 class="title is-2 has-text-black has-text-weight-bold mb-2">{property.name}</h1>
-                <p class="subtitle is-5 has-text-grey-darker">
-                    <span class="icon">📍</span> {property.address}, {property.city} ({property.country})
-                </p>
-                {#if property.status === 'DRAFT'}
-                    <span class="tag is-warning">Draft</span>
-                {/if}
-            </div>
+	<main class="section has-background-white-bis" style="min-height: 100vh;">
+		<div class="container is-max-desktop">
+			<div class="mb-5">
+				<h1 class="title is-2 has-text-black has-text-weight-bold mb-2">{property.name}</h1>
+				<p class="subtitle is-5 has-text-grey-darker">
+					<span class="icon"><i class="fas fa-location-dot"></i></span>
+					{property.address}, {property.city} ({property.country})
+				</p>
+				{#if property.status === 'DRAFT'}
+					<span class="tag is-warning">Draft</span>
+				{/if}
+			</div>
 
-            <div class="box p-0 is-overflow-hidden shadow-soft mb-6 carousel-container">
-                <img src={displayImages[currentImageIndex]} 
-                     class="carousel-img" 
-                     alt={property.name} />
-                
-                {#if displayImages.length > 1}
-                    <button class="carousel-btn prev" onclick={prevImage}>❮</button>
-                    <button class="carousel-btn next" onclick={nextImage}>❯</button>
-                    
-                    <div class="image-counter">
-                        <span class="tag is-dark">{currentImageIndex + 1} / {displayImages.length}</span>
-                    </div>
-                {/if}
-            </div>
+			<div class="" style="display: flex; justify-content: center; align-items: center;">
+				<!-- CAROUSEL -->
+				<div
+					class="box p-0 is-overflow-hidden shadow-soft carousel-container"
+					style="width:{carouselWidth}px; height:{carouselHeight}px;"
+				>
+					<img
+						src={displayImages[currentImageIndex]}
+						class="carousel-img"
+						alt={property.name}
+						onload={onImageLoad}
+					/>
 
-            <div class="columns is-variable is-8">
-                <div class="column is-8">
-                    
-                    <section class="box p-5 shadow-soft mb-6">
-                        <h3 class="title is-4 has-text-black mb-4">About this place</h3>
-                        <p class="is-size-5 has-text-grey-darker" style="line-height: 1.7;">
-                            {property.description || `Welcome to ${property.name}.`}
-                        </p>
-                    </section>
+					{#if displayImages.length > 1}
+						<button class="carousel-btn prev" onclick={prevImage}>❮</button>
+						<button class="carousel-btn next" onclick={nextImage}>❯</button>
 
-                    {#if property.amenities && property.amenities.length > 0}
-                    <section class="box p-5 shadow-soft mb-6">
-                        <h3 class="title is-4 has-text-black mb-5">What this place offers</h3>
-                        <div class="columns is-multiline is-mobile">
-                            {#each property.amenities as amenity}
-                                <div class="column is-6-tablet is-12-mobile mb-2">
-                                    <div class="is-flex is-align-items-center">
-                                        <span class="icon has-text-success mr-3">
-                                            ✅
-                                        </span>
-                                        <div>
-                                            <p class="has-text-weight-bold has-text-black mb-0">
-                                                {amenity.name}
-                                            </p>
-                                            <p class="is-size-7 has-text-grey">
-                                                {amenity.category}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            {/each}
-                        </div>
-                    </section>
-                    {/if}
+						<div class="image-counter">
+							<span class="tag is-dark">{currentImageIndex + 1} / {displayImages.length}</span>
+						</div>
+					{/if}
+				</div>
+			</div>
 
-                    <section>
-                        <h3 class="title is-4 has-text-black mb-5">Available Rooms</h3>
-                        {#if property.rooms && property.rooms.length > 0}
-                            {#each property.rooms as room}
-                                <div class="box p-5 shadow-soft mb-4">
-                                    <div class="level is-mobile mb-3">
-                                        <div class="level-left">
-                                            <div>
-                                                <h4 class="title is-5 has-text-black mb-1">
-                                                    {room.type} </h4>
-                                                <p class="is-size-6 has-text-grey-darker">Max {room.capacity} guests</p>
-                                            </div>
-                                        </div>
-                                        <div class="level-right has-text-right">
-                                            <div>
-                                                <p class="title is-4 has-text-black mb-0">€{room.price}</p>
-                                                <p class="is-size-7 has-text-grey">per night</p>
-                                            </div>
-                                        </div>
-                                    </div>
+			<div class="columns is-variable is-8">
+				<div class="column is-8">
+					<section class="box p-5 shadow-soft mb-6">
+						<h3 class="title is-4 has-text-black mb-4">About this place</h3>
+						<p class="description-text" style="line-height: 1.7;">
+							{property.description || `Welcome to ${property.name}.`}
+						</p>
+					</section>
 
-                                    {#if room.description}
-                                        <p class="mb-4 has-text-grey-dark">{room.description}</p>
-                                    {/if}
+					{#if property.amenities && property.amenities.length > 0}
+						<section class="box p-5 shadow-soft mb-6">
+							<h3 class="title is-4 has-text-black mb-5">What this place offers</h3>
+							<div class="property-amenities-grid">
+								{#each property.amenities as amenity}
+									<div class="property-amenity-chip">
+										<i class="fas {getPropertyAmenityIcon(amenity.name)}"></i>
+										<span>{amenity.name}</span>
+									</div>
+								{/each}
+							</div>
+						</section>
+					{/if}
 
-                                    {#if room.amenities && room.amenities.length > 0}
-                                        <div class="tags mb-5">
-                                            {#each room.amenities as amenity}
-                                                <span class="tag is-dark is-rounded border-grey">
-                                                    {amenity.name}
-                                                </span>
-                                            {/each}
-                                        </div>
-                                    {/if}
+					<section>
+						<h3 class="title is-4 has-text-black mb-5">Available Rooms</h3>
+						{#if property.rooms && property.rooms.length > 0}
+							{#each property.rooms as room}
+								<div class="box p-5 shadow-soft mb-4 room-card">
+									<div class="level is-mobile mb-4">
+										<div class="level-left">
+											<div>
+												<h4 class="title is-5 has-text-black mb-1">
+													<i class="fas fa-bed mr-2 has-text-primary"></i>
+													{room.type}
+												</h4>
+												<p class="is-size-6 has-text-grey-dark">
+													<i class="fas fa-users mr-1"></i>
+													Max {room.capacity} guests
+												</p>
+											</div>
+										</div>
+										<div class="level-right has-text-right">
+											<div>
+												<p class="title is-4 has-text-black mb-0">€{room.price}</p>
+												<p class="is-size-7 has-text-grey">per night</p>
+											</div>
+										</div>
+									</div>
 
-                                    <button class="button is-primary is-fullwidth is-rounded has-text-weight-bold">
-                                        Book Now
-                                    </button>
-                                </div>
-                            {/each}
-                        {:else}
-                            <p class="has-text-grey">No rooms listed yet.</p>
-                        {/if}
-                    </section>
-                </div>
+									{#if room.description}
+										<p class="mb-4 has-text-grey-dark">{room.description}</p>
+									{/if}
 
-                <div class="column is-4">
-                    <div class="sticky-sidebar">
-                        <div class="box p-5 shadow-soft">
-                            <p class="heading has-text-grey-darker has-text-weight-bold mb-4">Property Manager</p>
-                            <div class="is-flex is-align-items-center mb-5">
-                            <div class="owner-avatar mr-3">
-                                {property.owner?.name ? property.owner.name.charAt(0).toUpperCase() : '?'}
-                            </div>
-                            <div style="overflow: hidden;">
-                                <p class="has-text-weight-bold has-text-black is-size-7" style="white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
-                                    {property.owner?.name}
-                                </p>
-                                <p class="is-size-7 has-text-grey">{property.owner?.email}</p>
-                            </div>
+									{#if room.amenities && room.amenities.length > 0}
+										<div class="room-amenities-grid mb-4">
+											{#each room.amenities as amenity}
+												<div class="room-amenity-chip">
+													<i class="fas {getRoomAmenityIcon(amenity.name)} room-amenity-icon"></i>
+													<span class="room-amenity-text">{amenity.name}</span>
+												</div>
+											{/each}
+										</div>
+									{/if}
 
-                            </div>
-                            <button class="button is-dark is-fullwidth is-rounded has-text-weight-bold">
-                                Contact Host
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
+									<button
+										class="button is-primary is-fullwidth is-rounded has-text-weight-bold book-button"
+									>
+										<span>Book Now</span>
+										<i class="fas fa-arrow-right ml-2"></i>
+									</button>
+								</div>
+							{/each}
+						{:else}
+							<p class="has-text-grey">No rooms listed yet.</p>
+						{/if}
+					</section>
+				</div>
+
+				<div class="column is-4">
+					<div class="sticky-sidebar">
+						<div class="box p-5 shadow-soft">
+							<p class="heading has-text-grey-darker has-text-weight-bold mb-4">Property Manager</p>
+							<div class="is-flex is-align-items-center mb-5">
+								<div class="owner-avatar mr-3">
+									{property.owner?.name ? property.owner.name.charAt(0).toUpperCase() : '?'}
+								</div>
+								<div style="overflow: hidden;">
+									<p
+										class="has-text-weight-bold has-text-black is-size-7"
+										style="white-space: nowrap; text-overflow: ellipsis; overflow: hidden;"
+									>
+										{property.owner?.name}
+									</p>
+									<p class="is-size-7 has-text-grey">{property.owner?.email}</p>
+								</div>
+							</div>
+							<button class="button is-dark is-fullwidth is-rounded has-text-weight-bold">
+								<i class="fas fa-envelope mr-2"></i>
+								Contact Host
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</main>
 {/if}
 
 <style>
-    .shadow-soft {
-        box-shadow: 0 8px 20px rgba(0,0,0,0.05) !important;
-        border: 1px solid #f0f0f0;
-        background: white;
-    }
-    .is-overflow-hidden { overflow: hidden; border-radius: 12px; }
-    .border-bottom { border-bottom: 1px solid #f0f0f0; }
-    .is-sticky { position: sticky; top: 0; z-index: 10; }
-    .sticky-sidebar { position: sticky; top: 80px; }
-    
-    .owner-avatar {
-        width: 48px; height: 48px;
-        min-width: 48px;
-        background: #00d1b2; color: white;
-        border-radius: 50%; display: flex;
-        align-items: center; justify-content: center;
-        font-weight: bold; font-size: 1.2rem;
-    }
-    
-.carousel-container {
-    position: relative;
-    width: 100%;
-    border-radius: 12px;
-}
-.carousel-container img {
-    width: 100%;
-    height: auto; 
-    object-fit: contain; 
-    border-radius: 12px;
-    display: block; 
-}
+	.shadow-soft {
+		box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+		border: 1px solid #f0f0f0;
+		background: white;
+	}
+	.is-overflow-hidden {
+		overflow: hidden;
+		border-radius: 12px;
+	}
+	.border-bottom {
+		border-bottom: 1px solid #f0f0f0;
+	}
+	.is-sticky {
+		position: sticky;
+		top: 0;
+		z-index: 10;
+	}
+	.sticky-sidebar {
+		position: sticky;
+		top: 80px;
+	}
 
-    .carousel-img { width: 100%; height: 100%; object-fit: cover; }
-    .image-counter { position: absolute; bottom: 15px; right: 15px; }
-    
-    .carousel-btn {
-        position: absolute; top: 50%; transform: translateY(-50%);
-        background: rgba(255, 255, 255, 0.85); border: none;
-        width: 45px; height: 45px; border-radius: 50%;
-        cursor: pointer; font-size: 1.2rem; display: flex;
-        align-items: center; justify-content: center;
-        opacity: 0; transition: opacity 0.3s ease;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    .carousel-container:hover .carousel-btn { opacity: 1; }
-    .carousel-btn:hover { background: white; }
-    .prev { left: 20px; }
-    .next { right: 20px; }
+	.owner-avatar {
+		width: 48px;
+		height: 48px;
+		min-width: 48px;
+		background: #00d1b2;
+		color: white;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-weight: bold;
+		font-size: 1.2rem;
+	}
 
-    .border-grey { border: 1px solid #dbdbdb; }
+	.carousel-container {
+		position: relative;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		border-radius: 12px;
+		overflow: hidden;
+		background-color: #f5f5f5;
+		margin-bottom: 1.5rem;
+	}
 
-    :global(.title) { color: #000000 !important; }
-    :global(.subtitle) { color: #4a4a4a !important; }
+	.carousel-img {
+		object-fit: contain; /* immagine sempre intera */
+		display: block;
+		border-radius: 12px;
+		max-width: 100%;
+		max-height: 100%;
+	}
+
+	.carousel-btn {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		background: rgba(255, 255, 255, 0.85);
+		border: none;
+		width: 45px;
+		height: 45px;
+		border-radius: 50%;
+		cursor: pointer;
+		font-size: 1.2rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		opacity: 0;
+		transition: opacity 0.3s ease;
+		box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+	}
+	.carousel-container:hover .carousel-btn {
+		opacity: 1;
+	}
+	.carousel-btn:hover {
+		background: white;
+	}
+	.prev {
+		left: 20px;
+	}
+	.next {
+		right: 20px;
+	}
+	.image-counter {
+		position: absolute;
+		bottom: 15px;
+		right: 15px;
+	}
+
+	.description-text {
+		color: #374151;
+		font-size: 1.1rem;
+	}
+
+	.room-amenities-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+		margin-bottom: 0.5rem;
+	}
+	.room-amenity-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.35rem 0.65rem;
+		background-color: #f1f5f9;
+		border: 1px solid #e2e8f0;
+		border-radius: 10px;
+		font-size: 0.85rem;
+		font-weight: 500;
+		color: #4a5568;
+	}
+
+	.property-amenities-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 0.25rem;
+	}
+	.property-amenity-chip {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.4rem 0.7rem;
+		background-color: #e0f2fe;
+		border: 1px solid #bae6fd;
+		border-radius: 12px;
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: #0c4a6e;
+		transition: all 0.2s ease;
+	}
+	.property-amenity-chip:hover {
+		background-color: #bae6fd;
+		cursor: default;
+	}
+
+	.book-button {
+		background: #00d1b2;
+		border: none;
+		box-shadow: 0 4px 12px rgba(0, 209, 178, 0.2);
+	}
+
+	:global(.title) {
+		color: #000000 !important;
+	}
+	:global(.subtitle) {
+		color: #4a4a4a !important;
+	}
 </style>

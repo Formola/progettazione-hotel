@@ -4,6 +4,8 @@
     import { auth } from '$lib/auth.svelte';
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
+	import {onMount} from 'svelte';
+	import {authApi} from '$lib/api/auth';
 
     let { children } = $props();
 
@@ -22,6 +24,36 @@
 
     let isMenuOpen = $state(false);
     function toggleMenu() { isMenuOpen = !isMenuOpen; }
+
+    const keys = {
+        ACCESS_TOKEN: 'app_access_token',
+        ID_TOKEN: 'app_id_token',
+        REFRESH_TOKEN: 'app_refresh_token',
+        USER: 'app_user_data'
+    };
+
+onMount(() => {
+        const handleStorageChange = async (event: StorageEvent) => {
+            // Caso 1: Clear All (event.key è null)
+            // Caso 2: Rimozione di una chiave specifica tra quelle monitorate
+            const isTargetKey = event.key === keys.ACCESS_TOKEN || 
+                               event.key === keys.ID_TOKEN || 
+                               event.key === keys.REFRESH_TOKEN || 
+                               event.key === keys.USER;
+
+            if (event.key === null || (isTargetKey && !event.newValue)) {
+                console.warn("⚠️ Sessione rimossa dal browser. Logout in corso...");
+                
+                // Pulisci lo stato locale e reindirizza
+                await authApi.logout();
+                await goto('/auth/login');
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+
+        return () => window.removeEventListener('storage', handleStorageChange);
+    });
 </script>
 
 <svelte:head>

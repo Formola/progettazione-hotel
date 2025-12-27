@@ -12,7 +12,8 @@ export const config = {
         issuerUrl: env.PUBLIC_COGNITO_ISSUER_URL
     },
     api: {
-        baseUrl: 'http://localhost:8000'
+        baseUrl: env.PUBLIC_API_GATEWAY_ENDPOINT
+        // altri endpoint per lambda ecc possono essere aggiunti qui
     }
 };
 

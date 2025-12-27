@@ -19,7 +19,6 @@
 	}
 
 	async function handleSearch() {
-		if (!searchQuery) return;
 
 		isLoading = true;
 

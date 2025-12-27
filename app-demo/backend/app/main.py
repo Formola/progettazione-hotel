@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import search
 from app.config import settings
@@ -28,4 +28,16 @@ def health():
         "status": "healthy",
         "database": settings.DB_HOST,
         "region": settings.AWS_REGION
+    }
+    
+@app.get("/auth/me")
+def test_headers(
+    x_user_id: str = Header(None, alias="x-user-cognito-sub"),
+    x_user_email: str = Header(None, alias="x-user-email"),
+    x_user_role: str = Header(None, alias="x-user-role")
+):
+    return {
+        "received_id": x_user_id,
+        "received_email": x_user_email,
+        "received_role": x_user_role
     }

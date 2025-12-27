@@ -1,6 +1,7 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
+    import { onMount } from 'svelte';
     
     // 🔥 USIAMO LO STORE REATTIVO, NON L'API DIRETTA
     import { auth } from '$lib/auth.svelte';
@@ -12,10 +13,32 @@
 
     let signupSuccess = $derived(page.url.searchParams.get('signup_success') === 'true');
 
+
+    // Controlliamo se arriviamo qui a causa di una sessione scaduta
+    onMount(async () => {
+        if (signupSuccess) {
+            setTimeout(() => {
+                signupSuccess = false;
+            }, 3000);
+        }
+
+        
+        const sessionExpired = page.url.searchParams.get('expired') === 'true';
+        
+        // Se la sessione è scaduta o se siamo al login ma il localStorage è "sporco"
+        // (es. dopo il riavvio del container), forziamo il logout pulito.
+        if (sessionExpired || auth.isAuthenticated) {
+            console.warn("Cleaning up stale session...");
+            await auth.logout(); 
+            // Questo resetta auth.user e pulisce il localStorage
+        }
+    });
+
     // Auth Guard Reattiva
     $effect(() => {
-        // Appena auth.isAuthenticated diventa true, reindirizza
-        if (auth.isAuthenticated) goto('/owner/dashboard');
+        if (auth.isAuthenticated) {
+            goto('/owner/dashboard');
+        }
     });
 
     async function handleLogin() {

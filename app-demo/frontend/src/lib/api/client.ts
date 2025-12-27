@@ -4,7 +4,7 @@ import { authApi } from './auth';
 
 // Crea l'istanza base
 export const apiClient = axios.create({
-    baseURL: config.api.baseUrl, // http://localhost:8000
+    baseURL: config.api.baseUrl, // http://localhost:8000 or API Gateway Endpoint
     headers: {
         'Content-Type': 'application/json'
     }
@@ -25,35 +25,30 @@ apiClient.interceptors.request.use(
 
 // RESPONSE INTERCEPTOR (Gestisce il 401 e il Refresh)
 apiClient.interceptors.response.use(
-    (response) => response, // Se va tutto bene, ritorna la risposta
+    (response) => response,
     async (error) => {
         const originalRequest = error.config;
 
-        // Se l'errore è 401 E non abbiamo già provato a fare refresh (evita loop infiniti)
         if (error.response?.status === 401 && !originalRequest._retry) {
-            console.warn("🔄 [Axios] 401 rilevato. Refreshing token...");
-            originalRequest._retry = true; // Segna che ci stiamo provando
-
+            originalRequest._retry = true;
             try {
-                // Tenta il refresh
                 const newToken = await authApi.refreshSession();
-
                 if (newToken) {
-                    console.log("✅ [Axios] Refresh OK. Riprovo richiesta.");
-                    // Aggiorna l'header della richiesta fallita con il nuovo token
                     originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
-                    
-                    // Riprova la chiamata originale con Axios
                     return apiClient(originalRequest);
                 }
             } catch (refreshError) {
-                console.error("❌ [Axios] Refresh fallito. Logout.");
-                authApi.logout(); // Opzionale: forza logout
-                window.location.href = '/auth/login'; // Opzionale: redirect brutale
+                console.error("❌ Sessione scaduta o LocalStack resettato.");
+                await authApi.logout();
+                
+                // Lanciamo un errore specifico che la UI può riconoscere
+                return Promise.reject({
+                    status: 401,
+                    message: "Session expired. Please log in again.",
+                    forceLogin: true
+                });
             }
         }
-
-        // Se non era un 401 o il refresh è fallito, lancia l'errore al chiamante
         return Promise.reject(error);
     }
 );

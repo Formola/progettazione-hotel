@@ -1,18 +1,21 @@
-# --- API GATEWAY (INGRESSO GESTITO) ---
 
-# API Gateway (Tipo HTTP - V2)
+
+# --- API GATEWAY HTTP (V2) ---
+
 resource "aws_apigatewayv2_api" "main_api" {
   name          = "myapp-http-api"
   protocol_type = "HTTP"
-  
-  tags = {
-    Name = "Main API Gateway"
+
+  cors_configuration {
+    allow_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_headers = ["content-type", "authorization"]
+    max_age       = 300
   }
 }
 
-# Authorizer
-# Collega l'API Gateway a Cognito.
-# Se la richiesta non ha un token valido emesso dal nostro User Pool, viene bloccata qui.
+# --- AUTHORIZER ---
+
 resource "aws_apigatewayv2_authorizer" "jwt_auth" {
   api_id           = aws_apigatewayv2_api.main_api.id
   authorizer_type  = "JWT"
@@ -25,71 +28,72 @@ resource "aws_apigatewayv2_authorizer" "jwt_auth" {
   }
 }
 
-# Integrazione con ALB
-# Diciamo all'API Gateway: "Se passi il controllo, gira la richiesta al Load Balancer".
-resource "aws_apigatewayv2_integration" "alb_integration" {
+# --- INTEGRAZIONE (Fix Path Mapping) ---
+
+resource "aws_apigatewayv2_integration" "backend_integration" {
   api_id           = aws_apigatewayv2_api.main_api.id
-  integration_type = "HTTP_PROXY" # Usiamo Proxy per semplicità verso l'ALB pubblico
+  integration_type = "HTTP_PROXY"
   
-  # Usiamo il metodo ANY per passare tutto (GET, POST, PUT...)
-  integration_method = "ANY" 
+  payload_format_version = "1.0" 
+  integration_method     = "ANY" 
   
-  # L'URL di destinazione è il DNS del Load Balancer (definito in compute.tf)
-  integration_uri    = "http://${aws_lb.app_alb.dns_name}:4566" 
+  integration_uri = "http://backend:8000"
+
+  request_parameters = {
+    "overwrite:path" = "$request.path"
+    
+    "append:header.x-user-cognito-sub" = "$context.authorizer.claims.sub"
+    "append:header.x-user-email"       = "$context.authorizer.claims.username"
+    "append:header.x-user-role"        = "$context.authorizer.claims['cognito:groups']"
+  }
 }
 
-# Rotta Default (Catch-all)
-# Intercetta TUTTE le chiamate ($default) e applica l'Authorizer.
+# --- ROTTE ---
+
+# OPTIONS (CORS) e flyweight per ogni rotta
+resource "aws_apigatewayv2_route" "options_route" {
+  api_id    = aws_apigatewayv2_api.main_api.id
+  route_key = "OPTIONS /{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.backend_integration.id}"
+  authorization_type = "NONE"
+}
+
+resource "aws_apigatewayv2_route" "public_search_no_slash" {
+  api_id    = aws_apigatewayv2_api.main_api.id
+  route_key = "GET /api/search" 
+  target    = "integrations/${aws_apigatewayv2_integration.backend_integration.id}"
+  authorization_type = "NONE"
+}
+
+# RICERCA PUBBLICA - Con sub-paths
+resource "aws_apigatewayv2_route" "public_search_subpaths" {
+  api_id    = aws_apigatewayv2_api.main_api.id
+  route_key = "GET /api/search/{proxy+}" 
+  target    = "integrations/${aws_apigatewayv2_integration.backend_integration.id}"
+  authorization_type = "NONE"
+}
+
+# DEFAULT (Tutto il resto PROTETTO)
 resource "aws_apigatewayv2_route" "default_route" {
   api_id    = aws_apigatewayv2_api.main_api.id
-  route_key = "$default" # Significa "qualsiasi path e metodo"
+  route_key = "ANY /{proxy+}" 
 
-  target = "integrations/${aws_apigatewayv2_integration.alb_integration.id}"
+  target = "integrations/${aws_apigatewayv2_integration.backend_integration.id}"
 
-  # QUI ATTIVIAMO LA PROTEZIONE:
-  # authorization_type = "JWT"
-  # authorizer_id      = aws_apigatewayv2_authorizer.jwt_auth.id
-  
-  # Per ora lasciamo "NONE" per facilitarti i test iniziali con curl senza token.
-  authorization_type = "NONE" 
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt_auth.id
 }
 
-# Stage (Ambiente)
-# Lo stage di default che deploya le modifiche automaticamente.
+# --- STAGE ---
+
 resource "aws_apigatewayv2_stage" "default_stage" {
   api_id      = aws_apigatewayv2_api.main_api.id
   name        = "$default"
   auto_deploy = true
 }
 
-# --- OUTPUTS ---
-
 output "api_gateway_endpoint" {
-  description = "L'URL pubblico finale delle tue API (da usare nel frontend)"
-  value       = aws_apigatewayv2_api.main_api.api_endpoint
+  value = aws_apigatewayv2_api.main_api.api_endpoint
 }
 
 
-/*
-Il flusso che abbiamo costruito è:
-
-Ingresso: L'utente chiama l'URL dell'API Gateway (api_gateway_endpoint).
-
-Authorizer (aws_apigatewayv2_authorizer): Prima di fare qualsiasi cosa, il Gateway controlla
-l'header Authorization. Verifica che il token JWT sia stato firmato dal nostro User Pool Cognito (issuer)
-e sia destinato alla nostra app (audience). Se il token è falso o scaduto, la richiesta
-muore qui con un 401 Unauthorized.
-
-Routing (aws_apigatewayv2_route): Se autorizzato, la rotta $default prende la richiesta.
-
-Integrazione (aws_apigatewayv2_integration): La richiesta viene impacchettata e spedita (HTTP_PROXY)
-verso il DNS del tuo Load Balancer (aws_lb.app_alb.dns_name).
-
-Nota importante sull'Authorizer: Nel codice della rotta (default_route),
-abbiamo authorization_type = "NONE" (e commentato la parte JWT).
-Perché? Perché appena lanci terraform apply vorrai testare se il collegamento "Gateway -> ALB -> EC2"
-funziona facendo una semplice chiamata curl. Se attivassimo subito l'auth, dovresti prima registrarti,
-confermare l'email, fare login, prendere il token e passarlo nell'header solo per vedere se risponde "Hello World".
-Quando sei pronto a blindare tutto, basta decommentare quelle due righe e fare di nuovo terraform apply.
-
-*/

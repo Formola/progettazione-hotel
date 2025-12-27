@@ -1,17 +1,18 @@
 // src/lib/api/search.ts
-import { BaseApi } from './base';
 import type { PropertyData, SearchCriteria } from '../types';
+import {apiClient} from './client';
 
-class SearchApi extends BaseApi {
+class SearchApi {
     async searchProperties(criteria: SearchCriteria): Promise<PropertyData[]> {
-        // Costruiamo la query string per FastAPI
         const query = criteria.location ? `?location=${encodeURIComponent(criteria.location)}` : '';
-        return this.request<PropertyData[]>(`/api/search/${query}`);
+        // Usiamo axios (apiClient)
+        const response = await apiClient.get<PropertyData[]>(`/api/search/${query}`);
+        return response.data;
     }
 
     async getPropertyById(id: string): Promise<PropertyData> {
-        // Nota: Qui servirà un endpoint backend /api/properties/{id} 
-        return this.request<PropertyData>(`/api/properties/${id}`);
+        const response = await apiClient.get<PropertyData>(`/api/properties/${id}`);
+        return response.data;
     }
 }
 
