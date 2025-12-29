@@ -13,15 +13,9 @@ class MediaInput(BaseModel):
     base_64_data: str = Field(alias="base64Data")
     description: Optional[str] = None
     
-class MediaOutput(BaseModel):
-    id: str
-    file_name: str
-    storage_path: str
-    description: Optional[str] = None
-    file_type: Optional[str] = None
+    property_id: Optional[str] = Field(None, alias="propertyId")
+    room_id: Optional[str] = Field(None, alias="roomId")
     
-    model_config = ConfigDict(from_attributes=True)
-
 class MediaData(BaseModel):
     id: str
     file_name: str

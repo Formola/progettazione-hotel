@@ -6,6 +6,12 @@ class SearchRepository:
     def __init__(self, db: Session):
         self.db = db
 
+    # CQRS (Command Query Responsibility Segregation)
+    # Cqrs vuol dire che le operazioni di lettura (Query) sono separate
+    # dalle operazioni di scrittura (Command). Qui abbiamo solo Query.
+    
+    # Ritorna una lista di dizionari con i dati assemblati
+    # facciamo esattamente 5 query per ogni hotel (hotel, rooms, media, property amenities, room amenities)
     def search_properties(self, location: Optional[str] = None) -> List[Dict[str, Any]]:
         try:
             BASE_LIMIT = 20

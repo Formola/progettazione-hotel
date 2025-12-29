@@ -16,25 +16,27 @@ class MediaRepository:
 
     def save(self, entity: entities.Media, property_id: str = None, room_id: str = None):
         """
-        Saves or updates a Media entity in the database.
-            - If the media with the given ID exists, it updates its fields.
-            - If it does not exist, it creates a new record.
+        Save or update a Media entity in the database.
+        Either property_id or room_id should be provided to link the media.
         """
         model = self.db.query(models.MediaModel).get(entity.id)
         
         if model:
-            # Update (es. cambio descrizione)
+            # UPDATE: Aggiorna solo i metadati modificabili
             model.description = entity.description
-            model.file_name = entity.file_name
+            # Nota: Non aggiorniamo property_id/room_id qui di solito, 
+            # un media nasce e muore associato alla stessa entità.
         else:
-            # Insert
+            # INSERT: Crea il record con i collegamenti
             model = models.MediaModel(
                 id=entity.id,
                 file_name=entity.file_name,
                 file_type=entity.file_type,
                 storage_path=entity.storage_path,
                 description=entity.description,
-                property_id=property_id,
+                
+                # Qui SQLAlchemy gestisce i NULL se uno dei due è None
+                property_id=property_id, 
                 room_id=room_id
             )
             self.db.add(model)
@@ -46,3 +48,17 @@ class MediaRepository:
         if model:
             self.db.delete(model)
             self.db.commit()
+            
+            
+    def list_by_property(self, property_id: str) -> list[entities.Media]:
+        models_list = self.db.query(models.MediaModel).filter_by(property_id=property_id).all()
+        return [mappers.to_domain_media(m) for m in models_list]
+    
+    def list_by_room(self, room_id: str) -> list[entities.Media]:
+        models_list = self.db.query(models.MediaModel).filter_by(room_id=room_id).all()
+        return [mappers.to_domain_media(m) for m in models_list]
+    
+    def list_all(self) -> list[entities.Media]:
+        models_list = self.db.query(models.MediaModel).all()
+        return [mappers.to_domain_media(m) for m in models_list]
+    

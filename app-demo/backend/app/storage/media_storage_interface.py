@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from inspect import _void
 
 class IMediaStorage(ABC):
     @abstractmethod
@@ -10,7 +9,7 @@ class IMediaStorage(ABC):
         pass
 
     @abstractmethod
-    def delete_media(self, storage_path: str) -> _void:
+    def delete_media(self, storage_path: str):
         """
         Cancella il file dato il suo percorso/URL.
         """
