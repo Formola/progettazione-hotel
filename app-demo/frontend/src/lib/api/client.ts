@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { config } from '$lib/config';
 import { authApi } from './auth';
+import {isExpiringSoon} from '$lib/utils/jtw';
 
 // Crea l'istanza base
 export const apiClient = axios.create({
@@ -13,11 +14,18 @@ export const apiClient = axios.create({
 // REQUEST INTERCEPTOR (Inietta il Token)
 // Prima di ogni chiamata, controlla se abbiamo un token e lo appiccica
 apiClient.interceptors.request.use(
-    (config) => {
-        const token = authApi.getAccessToken();
+    async (config) => {
+        let token = authApi.getAccessToken();
+
+        // Controllo preventivo di scadenza
+        if (token && isExpiringSoon(token)) {
+            token = await authApi.refreshSession();
+        }
+
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }
+
         return config;
     },
     (error) => Promise.reject(error)
@@ -34,8 +42,11 @@ apiClient.interceptors.response.use(
             try {
                 const newToken = await authApi.refreshSession();
                 if (newToken) {
-                    originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
-                    return apiClient(originalRequest);
+                    const refreshedToken = authApi.getAccessToken();
+                    if (refreshedToken) {
+                        originalRequest.headers['Authorization'] = `Bearer ${refreshedToken}`;
+                        return apiClient(originalRequest);
+                    }
                 }
             } catch (refreshError) {
                 console.error("❌ Sessione scaduta o LocalStack resettato.");

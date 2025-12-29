@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import type { PropertyData } from '$lib/types';
 	import { selectedProperty } from '$lib/stores/selection';
-	import { getPropertyAmenityIcon, getRoomAmenityIcon } from '$lib/utils/icons';
+	import { getAmenityIcon } from '$lib/utils/icons';
 
 	let property = $state<PropertyData | null>(null);
 
@@ -121,7 +121,7 @@
 							<div class="property-amenities-grid">
 								{#each property.amenities as amenity}
 									<div class="property-amenity-chip">
-										<i class="fas {getPropertyAmenityIcon(amenity.name)}"></i>
+										<i class="fas {getAmenityIcon(amenity.name, amenity.category, 'property')}"></i>
 										<span>{amenity.name}</span>
 									</div>
 								{/each}
@@ -163,7 +163,7 @@
 										<div class="room-amenities-grid mb-4">
 											{#each room.amenities as amenity}
 												<div class="room-amenity-chip">
-													<i class="fas {getRoomAmenityIcon(amenity.name)} room-amenity-icon"></i>
+													<i class="fas {getAmenityIcon(amenity.name, amenity.category, 'room')} room-amenity-icon"></i>
 													<span class="room-amenity-text">{amenity.name}</span>
 												</div>
 											{/each}

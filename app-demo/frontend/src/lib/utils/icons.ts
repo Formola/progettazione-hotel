@@ -1,102 +1,53 @@
-/**
- * Utility functions per mappare amenities a icone Font Awesome
- * Solo le amenities più importanti e comuni
- */
+// Mappa delle categorie a icone generiche di fallback
+const CATEGORY_ICONS: Record<string, string> = {
+    'Generale': 'fa-circle-info',
+    'Fitness & Wellness': 'fa-dumbbell',
+    'Food & Dining': 'fa-utensils',
+    'Outdoor': 'fa-tree',
+    'Services': 'fa-bell-concierge',
+    'Comfort': 'fa-couch',
+    'Entertainment': 'fa-tv',
+    'Bathroom': 'fa-shower',
+    'Security': 'fa-shield-halved',
+    'View & Space': 'fa-panorama'
+};
 
-// ==========================================
-// PROPERTY AMENITIES (Hotel/Struttura)
-// ==========================================
+// stiamo considerando font-awesome
 
-export function getPropertyAmenityIcon(amenityName: string): string {
+export function getAmenityIcon(amenityName: string, category: string = '', type: 'property' | 'room' = 'property'): string {
     const name = amenityName.toLowerCase();
     
-    // 1. WiFi
-    if (name.includes('wifi') || name.includes('internet')) 
-        return 'fa-wifi';
-    
-    // 2. Piscina
-    if (name.includes('pool') || name.includes('piscina')) 
-        return 'fa-swimming-pool';
-    
-    // 3. Parcheggio
-    if (name.includes('parking') || name.includes('parcheggio')) 
-        return 'fa-square-parking';
-    
-    // 4. Palestra
-    if (name.includes('gym') || name.includes('palestra') || name.includes('fitness')) 
-        return 'fa-dumbbell';
-    
-    // 5. Spa
-    if (name.includes('spa') || name.includes('wellness')) 
-        return 'fa-spa';
-    
-    // 6. Ristorante
-    if (name.includes('restaurant') || name.includes('ristorante')) 
-        return 'fa-utensils';
-    
-    // 7. Bar
-    if (name.includes('bar') || name.includes('lounge')) 
-        return 'fa-martini-glass-citrus';
-    
-    // 8. Spiaggia
-    if (name.includes('beach') || name.includes('spiaggia')) 
-        return 'fa-umbrella-beach';
-    
-    // 9. Animali ammessi
-    if (name.includes('pet') || name.includes('animali')) 
-        return 'fa-paw';
-    
-    // 10. Reception 24h
-    if (name.includes('reception') || name.includes('24') || name.includes('concierge')) 
-        return 'fa-clock';
-    
-    return 'fa-circle-check'; // Icona default
+    // MARCH NOME
+
+    // Property specific
+    if (name.includes('wifi') || name.includes('internet')) return 'fa-wifi';
+    if (name.includes('pool') || name.includes('piscina')) return 'fa-swimming-pool';
+    if (name.includes('parking') || name.includes('parcheggio') || name.includes('auto')) return 'fa-square-parking';
+    if (name.includes('gym') || name.includes('palestra') || name.includes('fitness')) return 'fa-dumbbell';
+    if (name.includes('spa') || name.includes('wellness') || name.includes('sauna') || name.includes('massage')) return 'fa-spa';
+    if (name.includes('restaurant') || name.includes('ristorante') || name.includes('cena')) return 'fa-utensils';
+    if (name.includes('bar') || name.includes('drink') || name.includes('cocktail')) return 'fa-martini-glass-citrus';
+    if (name.includes('beach') || name.includes('spiaggia') || name.includes('mare')) return 'fa-umbrella-beach';
+    if (name.includes('pet') || name.includes('animali') || name.includes('cane') || name.includes('gatto')) return 'fa-paw';
+    if (name.includes('reception') || name.includes('concierge')) return 'fa-bell-concierge';
+    if (name.includes('colazione') || name.includes('breakfast')) return 'fa-mug-hot';
+    if (name.includes('laundry') || name.includes('lavanderia')) return 'fa-shirt';
+
+    // Room specific
+    if (name.includes('air') || name.includes('aria') || name.includes('ac')) return 'fa-wind';
+    if (name.includes('tv') || name.includes('television') || name.includes('netflix')) return 'fa-tv';
+    if (name.includes('hair') || name.includes('asciuga') || name.includes('phon')) return 'fa-wind'; // o fa-soap
+    if (name.includes('minibar') || name.includes('fridge') || name.includes('frigo')) return 'fa-wine-bottle';
+    if (name.includes('safe') || name.includes('cassa') || name.includes('sicurezza')) return 'fa-lock';
+    if (name.includes('balcony') || name.includes('balcone') || name.includes('terrazza')) return 'fa-person-through-window';
+    if (name.includes('view') || name.includes('vista')) return 'fa-mountain-sun';
+    if (name.includes('coffee') || name.includes('caffè') || name.includes('tea')) return 'fa-mug-saucer';
+
+    // 2. FALLBACK SULLA CATEGORIA (Se il nome non matcha nessuna icona)
+    if (category && CATEGORY_ICONS[category]) {
+        return CATEGORY_ICONS[category];
+    }
+
+    // 3. DEFAULT TOTALE
+    return 'fa-circle-check'; 
 }
-
-
-// ==========================================
-// ROOM AMENITIES (Camera/Stanza)
-// ==========================================
-
-export function getRoomAmenityIcon(amenityName: string): string {
-    const name = amenityName.toLowerCase();
-    
-    // 1. Aria Condizionata
-    if (name.includes('air') || name.includes('conditioning') || name.includes('aria')) 
-        return 'fa-wind';
-    
-    // 2. TV
-    if (name.includes('tv') || name.includes('television')) 
-        return 'fa-tv';
-    
-    // 3. Asciugacapelli
-    if (name.includes('hairdryer') || name.includes('asciugacapelli') || name.includes('phon')) 
-        return 'fa-shower'; // Icona più generica per bagno
-    
-    // 4. Minibar
-    if (name.includes('minibar') || name.includes('mini bar') || name.includes('fridge')) 
-    return 'fa-wine-bottle';
-    
-    // 5. Cassaforte
-    if (name.includes('safe') || name.includes('cassaforte')) 
-        return 'fa-lock';
-    
-    // 6. Balcone/Vista
-    if (name.includes('balcony') || name.includes('balcone') || name.includes('view') || name.includes('vista')) 
-        return 'fa-house-flag';
-    
-    return 'fa-circle-check'; // Icona default
-}
-
-
-// ==========================================
-// HELPER: Determina automaticamente il tipo
-// ==========================================
-
-export function getAmenityIcon(amenityName: string, type: 'property' | 'room' = 'property'): string {
-    return type === 'property' 
-        ? getPropertyAmenityIcon(amenityName)
-        : getRoomAmenityIcon(amenityName);
-}
-
-// const iconClass = getAmenityIcon('WiFi', 'property'); // Restituisce 'fa-wifi'

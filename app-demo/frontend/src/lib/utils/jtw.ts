@@ -12,3 +12,9 @@ export function parseJwt(token: string): any {
         return null;
     }
 }
+
+export function isExpiringSoon(token: string, offsetSeconds = 60) {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const now = Math.floor(Date.now() / 1000);
+    return payload.exp - now < offsetSeconds;
+}

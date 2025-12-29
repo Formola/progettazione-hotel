@@ -346,43 +346,41 @@ ON CONFLICT (property_id, amenity_id) DO NOTHING;
 INSERT INTO rooms (id, property_id, type, price, capacity, description)
 VALUES
 -- Dragonfly Inn (3 stanze)
-('room_01_1','prop_01','Singola',100.00,1, 'Cozy single room with all basic amenities.'),
-('room_01_2','prop_01','Doppia',150.00,2, 'Comfortable double room with modern facilities.'),
-('room_01_3','prop_01','Suite',250.00,4, 'Spacious suite with premium amenities.'),
+('room_01_1','prop_01','SINGLE',100.00,1, 'Cozy single room with all basic amenities.'),
+('room_01_2','prop_01','DOUBLE',150.00,2, 'Comfortable double room with modern facilities.'),
+('room_01_3','prop_01','SUITE',250.00,4, 'Spacious suite with premium amenities.'),
 
 -- Bates Motel (2 stanze)
-('room_02_1','prop_02','Doppia',130.00,2, 'Comfortable double room with modern facilities.'),
-('room_02_2','prop_02','Suite',220.00,3, 'Spacious suite with premium amenities.'),
+('room_02_1','prop_02','DOUBLE',130.00,2, 'Comfortable double room with modern facilities.'),
+('room_02_2','prop_02','SUITE',220.00,3, 'Spacious suite with premium amenities.'),
 
 -- Overlook Hotel (2 stanze)
-('room_03_1','prop_03','Singola',90.00,1, 'Cozy single room with all basic amenities.'),
-('room_03_2','prop_03','Doppia',140.00,2, 'Comfortable double room with modern facilities.'),
+('room_03_1','prop_03','SINGLE',90.00,1, 'Cozy single room with all basic amenities.'),
+('room_03_2','prop_03','DOUBLE',140.00,2, 'Comfortable double room with modern facilities.'),
 
 -- Continental Hotel (1 suite luxury)
-('room_04_1','prop_04','Suite',200.00,3, 'Spacious suite with premium amenities.'),
+('room_04_1','prop_04','SUITE',200.00,3, 'Spacious suite with premium amenities.'),
 
 -- Hotel California (2 stanze)
-('room_05_1','prop_05','Singola',120.00,1, 'Cozy single room with all basic amenities.'),
-('room_05_2','prop_05','Doppia',170.00,2, 'Comfortable double room with modern facilities.'),
-
+('room_05_1','prop_05','SINGLE',120.00,1, 'Cozy single room with all basic amenities.'),
+('room_05_2','prop_05','DOUBLE',170.00,2, 'Comfortable double room with modern facilities.'),
 -- Grand Budapest (2 stanze)
-('room_06_1','prop_06','Doppia',160.00,2, 'Comfortable double room with modern facilities.'),
-('room_06_2','prop_06','Suite',280.00,4, 'Spacious suite with premium amenities.'),
+('room_06_1','prop_06','DOUBLE',160.00,2, 'Comfortable double room with modern facilities.'),
+('room_06_2','prop_06','SUITE',280.00,4, 'Spacious suite with premium amenities.'),
 
 -- The Great Northern (3 stanze)
-('room_07_1','prop_07','Singola',95.00,1, 'Cozy single room with all basic amenities.'),
-('room_07_2','prop_07','Doppia',155.00,2, 'Comfortable double room with modern facilities.'),
-('room_07_3','prop_07','Suite',260.00,3, 'Spacious suite with premium amenities.'),
+('room_07_1','prop_07','SINGLE',95.00,1, 'Cozy single room with all basic amenities.'),
+('room_07_2','prop_07','DOUBLE',155.00,2, 'Comfortable double room with modern facilities.'),
+('room_07_3','prop_07','SUITE',260.00,3, 'Spacious suite with premium amenities.'),
 
 -- Beverly Hills Hotel (1 doppia)
-('room_08_1','prop_08','Doppia',180.00,2, 'Comfortable double room with modern facilities.'),
-
+('room_08_1','prop_08','DOUBLE',180.00,2, 'Comfortable double room with modern facilities.'),
 -- Radisson Blue (2 stanze)
-('room_09_1','prop_09','Singola',80.00,1, 'Cozy single room with all basic amenities.'),
-('room_09_2','prop_09','Doppia',130.00,2, 'Comfortable double room with modern facilities.'),
+('room_09_1','prop_09','SINGLE',80.00,1, 'Cozy single room with all basic amenities.'),
+('room_09_2','prop_09','DOUBLE',130.00,2, 'Comfortable double room with modern facilities.'),
 
 -- Plaza Hotel (1 suite luxury)
-('room_10_1','prop_10','Suite',300.00,4, 'Spacious suite with premium amenities.')
+('room_10_1','prop_10','SUITE',300.00,4, 'Spacious suite with premium amenities.')
 ON CONFLICT (id) DO NOTHING;
 
 -- ==========================================
