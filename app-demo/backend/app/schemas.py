@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 from enum import Enum
 from datetime import date
@@ -12,9 +12,9 @@ class PropertyStatus(str, Enum):
     INACTIVE = 'INACTIVE'
 
 class RoomType(str, Enum):
-    SINGLE = 'SINGLE'
-    DOUBLE = 'DOUBLE'
-    SUITE = 'SUITE'
+    SINGLE = 'Singola' 
+    DOUBLE = 'Doppia'
+    SUITE = 'Suite'
 
 class MediaType(str, Enum):
     IMAGE = 'IMAGE'
@@ -24,24 +24,30 @@ class UserRole(str, Enum):
     GUEST = 'GUEST'
     OWNER = 'OWNER'
     ADMIN = 'ADMIN'
+    
+    
+class UserContext(BaseModel):
+    id: str
+    email: Optional[str] = None 
+    role: Optional[str] = None
 
 # ==========================================
 # MEDIA
 # ==========================================
-class MediaInput(BaseModel):  # Payload Upload
-    fileName: str
-    fileType: MediaType
-    base64Data: str
+class MediaInput(BaseModel):
+    file_name: str = Field(alias="fileName")
+    file_type: MediaType = Field(alias="fileType")
+    base_64_data: str = Field(alias="base64Data")
     description: Optional[str] = None
 
-class MediaData(BaseModel):   # Visualizzazione
+class MediaData(BaseModel):
     id: str
-    url: str
-    type: MediaType
+    file_name: str
+    storage_path: str
+    file_type: Optional[str] = None
     description: Optional[str] = None
-
-    class Config:
-        from_attributes = True
+    
+    model_config = ConfigDict(from_attributes=True) 
 
 # ==========================================
 # AMENITIES
@@ -50,38 +56,39 @@ class Amenity(BaseModel):
     id: str
     name: str
     category: str
-    icon: Optional[str] = None
+    description: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+    
+class NewAmenityInput(BaseModel):
+    name: str
+    category: str
+    description: Optional[str] = None
 
 # ==========================================
 # ROOMS
 # ==========================================
-# Campi comuni per non ripeterci
 class _RoomBase(BaseModel):
     type: RoomType
     description: Optional[str] = None
-    price: float
-    capacity: int
+    price: float = Field(..., gt=0) # Validazione: deve essere > 0
+    capacity: int = Field(..., gt=0)
 
-# INPUT: Aggiunge la lista di ID per la creazione
 class RoomInput(_RoomBase):
     amenity_ids: List[str] = []
+    new_amenities: List[NewAmenityInput] = []
+    media_ids: List[str] = [] 
 
-# OUTPUT: Aggiunge ID, oggetti completi e Media
 class RoomData(_RoomBase):
     id: str
     amenities: List[Amenity] = []
     media: List[MediaData] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # ==========================================
 # PROPERTIES
 # ==========================================
-# Campi comuni (Nome, Indirizzo...)
 class _PropertyBase(BaseModel):
     name: str
     address: str
@@ -89,11 +96,11 @@ class _PropertyBase(BaseModel):
     country: str
     description: str
 
-# INPUT: Quello che l'Owner compila (+ amenity_ids)
 class PropertyInput(_PropertyBase):
     amenity_ids: List[str] = []
+    new_amenities: List[NewAmenityInput] = []
+    media_ids: List[str] = []
 
-# OUTPUT: Quello che l'Owner vede (+ oggetti completi, status, id)
 class PropertyData(_PropertyBase):
     id: str
     status: PropertyStatus
@@ -103,21 +110,22 @@ class PropertyData(_PropertyBase):
     rooms: List[RoomData] = []
     media: List[MediaData] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
-# ==========================================
-# SEARCH & USER
-# ==========================================
-class UserData(BaseModel):
+class OwnerSummary(BaseModel):
     id: str
+    name: str
     email: str
-    role: UserRole
 
-class SearchCriteria(BaseModel):
-    location: Optional[str] = None
-    minPrice: Optional[float] = None
-    maxPrice: Optional[float] = None
-    checkIn: Optional[date] = None
-    checkOut: Optional[date] = None
-    guests: Optional[int] = None
+# Aggiorniamo PropertyData per l'output della ricerca
+class PropertySearchResponse(_PropertyBase):
+    id: str
+    status: PropertyStatus
+    # Sostituiamo owner_id con l'oggetto owner completo
+    owner: OwnerSummary 
+    
+    amenities: List[Amenity] = []
+    rooms: List[RoomData] = []
+    media: List[MediaData] = []
+
+    model_config = ConfigDict(from_attributes=True)
