@@ -4,16 +4,54 @@ from sqlalchemy.orm import Session
 from app.domain import entities
 from app.models import models  
 from app.repositories import mappers
+from sqlalchemy.orm import selectinload
+
 
 class RoomRepository:
     def __init__(self, db: Session):
         self.db = db
 
     def get_by_id(self, room_id: str) -> Optional[entities.Room]:
-        model = self.db.query(models.RoomModel).filter(models.RoomModel.id == room_id).first()
-        if not model:
-            return None
-        return mappers.to_domain_room(model)
+        stmt = (
+            self.db.query(models.RoomModel)
+            .options(
+                # Carichiamo i LINK e, dentro i link, le AMENITIES
+                selectinload(models.RoomModel.amenity_links).joinedload(models.RoomAmenityLinkModel.amenity),
+                selectinload(models.RoomModel.media)
+            )
+            .filter(models.RoomModel.id == room_id)
+        )
+        model = stmt.first()
+        return mappers.to_domain_room(model) if model else None
+    
+    def get_by_property_id(self, property_id: str) -> List[entities.Room]:
+        
+        """
+        OTTIMIZZAZIONE PERFORMANCE (selectinload):
+        
+        Usiamo `selectinload` per evitare il problema "N+1 Query".
+        
+        Esempio su 50 stanze:
+        - Lazy Loading (Default): 1 query (rooms) + 50 (amenities) + 50 (media) = 101 query.
+        - Eager Loading (selectinload): 
+          1. Query Rooms
+          2. Query Amenities (WHERE room_id IN (...))
+          3. Query Media (WHERE room_id IN (...))
+          Totale = 3 query.
+        """
+        
+        
+        stmt = (
+            self.db.query(models.RoomModel)
+            .options(
+                selectinload(models.RoomModel.amenity_links).joinedload(models.RoomAmenityLinkModel.amenity),
+                selectinload(models.RoomModel.media)
+            )
+            .filter(models.RoomModel.property_id == property_id)
+        )
+        
+        models_list = stmt.all()
+        return [mappers.to_domain_room(m) for m in models_list]
 
     def save(self, entity: entities.Room) -> entities.Room:
         # Recupera il modello esistente
@@ -59,23 +97,37 @@ class RoomRepository:
     # =================================================================
     # HELPER PRIVATI DI SINCRONIZZAZIONE
     # =================================================================
+    
+    ## EVITNANO DIFFING
+    ## ossia: non dobbiamo confrontare cosa è cambiato,
+    ## ma semplicemente riallineare lo stato del DB
+    ## a quello dell'entità passata.
+    ## se non svuotassimo le liste, dovremmo fare un diffing manuale
+    ## per capire cosa aggiungere, cosa rimuovere, cosa aggiornare.
+    ## esempio: se un'amenity è stata rimossa, 
 
     def _sync_amenities(self, model: models.RoomModel, amenity_entities: List[entities.RoomAmenity]):
         """
-        Gestisce la relazione Many-to-Many con room_amenities.
-        Sostituisce la lista corrente con quella nuova.
+        Handles the Many-to-Many relationship with Room Amenities via the link table.
         """
+        # Clear the current list of links (it will be recreated)
+        # Note: thanks to cascade="all, delete-orphan", removing from the list deletes from the DB
+        model.amenity_links = [] 
+
         if not amenity_entities:
-            model.amenities = []
             return
 
-        ids = [a.id for a in amenity_entities]
-        # Recupera gli oggetti ORM reali dal DB
-        amenity_models = self.db.query(models.RoomAmenityModel).filter(
-            models.RoomAmenityModel.id.in_(ids)
-        ).all()
+        new_links = []
+        for am_entity in amenity_entities:
+            # Creiamo il Link Model esplicitamente
+            link = models.RoomAmenityLinkModel(
+                room_id=model.id,
+                amenity_id=am_entity.id,
+                custom_description=am_entity.custom_description
+            )
+            new_links.append(link)
         
-        model.amenities = amenity_models
+        model.amenity_links = new_links
 
     def _sync_media(self, model: models.RoomModel, media_entities: List[entities.Media]):
         """
@@ -95,11 +147,10 @@ class RoomRepository:
                 # file_name e path di solito non cambiano durante un update stanza, 
                 updated_media_list.append(existing_media)
             else:
-                # 2. INSERT: Nuovo media aggiunto alla lista
+                # INSERT: Nuovo media aggiunto alla lista
                 new_media = mappers.to_model_media(m_entity, room_id=model.id)
                 updated_media_list.append(new_media)
         
         # DELETE (Orphan Removal): Assegnando la nuova lista, SQLAlchemy
         # rimuoverà dal DB i media che erano in db_media_map ma non in updated_media_list.
-        # (Richiede cascade="all, delete-orphan" nella relazione in RoomModel)
         model.media = updated_media_list

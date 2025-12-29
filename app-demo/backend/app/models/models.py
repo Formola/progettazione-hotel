@@ -1,27 +1,45 @@
-from sqlalchemy import Column, String, Integer, Text, Boolean, Float, ForeignKey, DateTime, Table, Index, func
+from sqlalchemy import Column, String, Integer, Text, Boolean, Float, ForeignKey, DateTime, Index, func
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from app.db import Base
 
-property_amenities_link = Table(
-    'property_amenities_link',
-    Base.metadata,
-    Column('property_id', String, ForeignKey('properties.id', ondelete="CASCADE"), primary_key=True),
-    Column('amenity_id', String, ForeignKey('property_amenities.id', ondelete="CASCADE"), primary_key=True),
-    Column('created_at', DateTime(timezone=True), server_default=func.now())
-)
+# ==========================================
+# ASSOCIATION MODELS (Tabelle di Link come Classi)
+# ==========================================
 
-room_amenities_link = Table(
-    'room_amenities_link',
-    Base.metadata,
-    Column('room_id', String, ForeignKey('rooms.id', ondelete="CASCADE"), primary_key=True),
-    Column('amenity_id', String, ForeignKey('room_amenities.id', ondelete="CASCADE"), primary_key=True),
-    Column('created_at', DateTime(timezone=True), server_default=func.now())
-)
+class PropertyAmenityLinkModel(Base):
+    __tablename__ = 'property_amenities_link'
+    
+    # Chiavi Esterne
+    property_id = Column(String, ForeignKey('properties.id', ondelete="CASCADE"), primary_key=True)
+    amenity_id = Column(String, ForeignKey('property_amenities.id', ondelete="CASCADE"), primary_key=True)
+    
+    # Campi Extra
+    custom_description = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relazioni (Many-to-One verso i genitori)
+    property = relationship("PropertyModel", back_populates="amenity_links")
+    amenity = relationship("PropertyAmenityModel") # Accesso diretto all'amenity dal link
+
+
+class RoomAmenityLinkModel(Base):
+    __tablename__ = 'room_amenities_link'
+
+    # Chiavi Esterne
+    room_id = Column(String, ForeignKey('rooms.id', ondelete="CASCADE"), primary_key=True)
+    amenity_id = Column(String, ForeignKey('room_amenities.id', ondelete="CASCADE"), primary_key=True)
+    
+    # Campi Extra
+    custom_description = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relazioni (Many-to-One verso i genitori)
+    room = relationship("RoomModel", back_populates="amenity_links")
+    amenity = relationship("RoomAmenityModel") # Accesso diretto all'amenity dal link
 
 # ==========================================
-# MODELLI ORM
+# MODELLI ORM PRINCIPALI
 # ==========================================
 
 class UserModel(Base):
@@ -42,11 +60,11 @@ class PropertyAmenityModel(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False)
-    description = Column(Text)
     category = Column(String)
+    description = Column(Text) # Descrizione generica dal catalogo
     
-    # Relazione inversa (opzionale, utile per query)
-    properties = relationship("PropertyModel", secondary=property_amenities_link, back_populates="amenities")
+    # Nota: Non definiamo relationship inverse complesse qui per evitare cicli,
+    # se serve trovare le property che hanno questa amenity, si fa via query sul LinkModel.
 
 
 class RoomAmenityModel(Base):
@@ -54,10 +72,8 @@ class RoomAmenityModel(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False)
-    description = Column(Text)
     category = Column(String)
-    
-    rooms = relationship("RoomModel", secondary=room_amenities_link, back_populates="amenities")
+    description = Column(Text) # Descrizione generica dal catalogo
 
 
 class PropertyModel(Base):
@@ -70,19 +86,18 @@ class PropertyModel(Base):
     city = Column(String)
     country = Column(String)
     description = Column(Text)
-    status = Column(String, default="DRAFT") # Mappato poi a Enum nel Domain
+    status = Column(String, default="DRAFT") 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relazioni
-    # cascade="all, delete-orphan" per eliminare tutto se la property viene cancellata
-    # importante, se si elimina una property, si eliminano anche stanze e media associati
-    # oppure se se si rimuove una stanza dalla property, si elimina la stanza stessa e non si lascia orfana, stesso per i media.
     owner = relationship("UserModel", back_populates="properties")
     rooms = relationship("RoomModel", back_populates="property", cascade="all, delete-orphan")
     media = relationship("MediaModel", back_populates="property", cascade="all, delete-orphan")
-    amenities = relationship("PropertyAmenityModel", secondary=property_amenities_link, back_populates="properties")
+    
+    # MODIFICA IMPORTANTE: Relazione verso il LINK, non direttamente alle amenities
+    amenity_links = relationship("PropertyAmenityLinkModel", back_populates="property", cascade="all, delete-orphan")
 
-    # Indici (Gin/Trigram per ricerca veloce)
+    # Indici
     __table_args__ = (
         Index('idx_properties_city_trgm', 'city', postgresql_using='gin', postgresql_ops={'city': 'gin_trgm_ops'}),
         Index('idx_properties_name_trgm', 'name', postgresql_using='gin', postgresql_ops={'name': 'gin_trgm_ops'}),
@@ -105,7 +120,9 @@ class RoomModel(Base):
     # Relazioni
     property = relationship("PropertyModel", back_populates="rooms")
     media = relationship("MediaModel", back_populates="room", cascade="all, delete-orphan")
-    amenities = relationship("RoomAmenityModel", secondary=room_amenities_link, back_populates="rooms")
+    
+    # MODIFICA IMPORTANTE: Relazione verso il LINK
+    amenity_links = relationship("RoomAmenityLinkModel", back_populates="room", cascade="all, delete-orphan")
 
 
 class MediaModel(Base):

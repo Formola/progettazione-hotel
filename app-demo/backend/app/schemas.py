@@ -4,8 +4,6 @@ from enum import Enum
 from datetime import date
 from app.domain.entities import PropertyStatus, RoomType, MediaType
 
-
-    
 # ==========================================
 # MEDIA
 # ==========================================
@@ -14,6 +12,15 @@ class MediaInput(BaseModel):
     file_type: MediaType = Field(alias="fileType")
     base_64_data: str = Field(alias="base64Data")
     description: Optional[str] = None
+    
+class MediaOutput(BaseModel):
+    id: str
+    file_name: str
+    storage_path: str
+    description: Optional[str] = None
+    file_type: Optional[str] = None
+    
+    model_config = ConfigDict(from_attributes=True)
 
 class MediaData(BaseModel):
     id: str
@@ -35,28 +42,37 @@ class Amenity(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
     
+class AmenityOutput(Amenity):
+    custom_description: Optional[str] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+    
 class NewAmenityInput(BaseModel):
     name: str
     category: str
     description: Optional[str] = None
 
+class AmenityLinkInput(BaseModel):
+    id: str
+    custom_description: Optional[str] = None
+    
 # ==========================================
 # ROOMS
 # ==========================================
 class _RoomBase(BaseModel):
     type: RoomType
     description: Optional[str] = None
-    price: float = Field(..., gt=0) # Validazione: deve essere > 0
+    price: float = Field(..., gt=0)
     capacity: int = Field(..., gt=0)
 
 class RoomInput(_RoomBase):
-    amenity_ids: List[str] = []
+    amenities: List[AmenityLinkInput] = []
     new_amenities: List[NewAmenityInput] = []
     media_ids: List[str] = [] 
 
 class RoomData(_RoomBase):
     id: str
-    amenities: List[Amenity] = []
+    amenities: List[AmenityOutput] = [] 
     media: List[MediaData] = []
 
     model_config = ConfigDict(from_attributes=True)
@@ -72,7 +88,7 @@ class _PropertyBase(BaseModel):
     description: str
 
 class PropertyInput(_PropertyBase):
-    amenity_ids: List[str] = []
+    amenities: List[AmenityLinkInput] = []
     new_amenities: List[NewAmenityInput] = []
     media_ids: List[str] = []
 
@@ -81,7 +97,7 @@ class PropertyData(_PropertyBase):
     status: PropertyStatus
     owner_id: str
     
-    amenities: List[Amenity] = []
+    amenities: List[AmenityOutput] = [] 
     rooms: List[RoomData] = []
     media: List[MediaData] = []
 
@@ -92,14 +108,12 @@ class OwnerSummary(BaseModel):
     name: str
     email: str
 
-# Aggiorniamo PropertyData per l'output della ricerca
 class PropertySearchResponse(_PropertyBase):
     id: str
     status: PropertyStatus
-    # Sostituiamo owner_id con l'oggetto owner completo
     owner: OwnerSummary 
     
-    amenities: List[Amenity] = []
+    amenities: List[AmenityOutput] = [] 
     rooms: List[RoomData] = []
     media: List[MediaData] = []
 

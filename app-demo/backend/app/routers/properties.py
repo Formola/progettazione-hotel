@@ -56,6 +56,16 @@ def get_properties_by_owner(
     """
     return service.get_user_properties(owner_id=owner_id, owner=None)
 
+@router.get("/{property_id}/rooms", response_model=List[RoomData])
+def get_rooms_for_property(
+    property_id: str,
+    service: RoomService = Depends(deps.get_room_service)
+):
+    """
+    Fetch all rooms for a specific property.
+    """
+    return service.get_rooms_by_property_id(property_id=property_id)
+
 @router.post("/{property_id}/publish", response_model=PropertyData)
 def publish_property(
     property_id: str,

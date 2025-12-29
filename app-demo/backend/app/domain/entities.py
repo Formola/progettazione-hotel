@@ -52,13 +52,18 @@ class IAmenity(ABC):
     @abstractmethod
     def getDescription(self) -> str:
         pass
+    
+    @abstractmethod
+    def getCustomDescription(self) -> str:
+        pass
 
 @dataclass
 class PropertyAmenity(IAmenity):
     id: str
     name: str
     category: str
-    description: Optional[str] = None
+    description: Optional[str] = None       # Descrizione generica (dal catalogo)
+    custom_description: Optional[str] = None
     
     # --- IMPLEMENTAZIONE METODI ASTRATTI ---
     def getName(self) -> str:
@@ -69,14 +74,17 @@ class PropertyAmenity(IAmenity):
     
     def getDescription(self) -> str:
         return self.description or ""
+    
+    def getCustomDescription(self) -> str:
+        return self.custom_description or ""
 
 @dataclass
 class RoomAmenity(IAmenity):
     id: str
     name: str
     category: str
-    description: Optional[str] = None
-    
+    description: Optional[str] = None       # Descrizione generica (dal catalogo)
+    custom_description: Optional[str] = None # <--- AGGIUNTO: Descrizione specifica per la stanza    
     # --- IMPLEMENTAZIONE METODI ASTRATTI ---
     def getName(self) -> str:
         return self.name
@@ -86,6 +94,9 @@ class RoomAmenity(IAmenity):
     
     def getDescription(self) -> str:
         return self.description or ""
+    
+    def getCustomDescription(self) -> str:
+        return self.custom_description or ""
     
 ## MEDIA
 
@@ -114,14 +125,29 @@ class Room:
     amenities: List[RoomAmenity] = field(default_factory=list)
     media: List[Media] = field(default_factory=list)
 
-    def add_amenity(self, amenity: RoomAmenity):
-        # Type Check opzionale ma utile nel dominio
+    def add_amenity(self, amenity: RoomAmenity, custom_description: Optional[str] = None):
         if not isinstance(amenity, RoomAmenity):
-            raise TypeError("Can only add RoomAmenity to a Room")
-            
-        # Evita duplicati (logica di dominio)
-        if amenity not in self.amenities:
+            raise TypeError("Can only add RoomAmenity")
+        
+        # Se viene passata una custom_description al momento dell'aggiunta, aggiorniamo l'entità
+        if custom_description:
+            amenity.custom_description = custom_description
+
+        # Logica per evitare duplicati (controlliamo per ID)
+        exists = any(a.id == amenity.id for a in self.amenities)
+        if not exists:
             self.amenities.append(amenity)
+        else:
+            # Opzionale: se esiste già, aggiorniamo la descrizione?
+            for a in self.amenities:
+                if a.id == amenity.id:
+                    a.custom_description = custom_description
+            
+            
+            
+    def remove_amenity(self, amenity_id: str):
+        # Ricrea la lista escludendo quello con l'ID target
+        self.amenities = [a for a in self.amenities if a.id != amenity_id]
 
     def update_price(self, new_price: float):
         if new_price <= 0:
@@ -190,12 +216,26 @@ class Property:
         # Filtra la lista rimuovendo la stanza con quell'ID
         self.rooms = [r for r in self.rooms if r.id != room_id]
 
-    def add_amenity(self, amenity: PropertyAmenity):
-        if not isinstance(amenity, PropertyAmenity):
-            raise TypeError("Can only add PropertyAmenity to a Property")
-            
-        if amenity not in self.amenities:
-            self.amenities.append(amenity)
 
     def is_owned_by(self, user_id: str) -> bool:
         return self.owner_id == user_id
+    
+    
+    def add_amenity(self, amenity: PropertyAmenity, custom_description: Optional[str] = None):
+        if not isinstance(amenity, PropertyAmenity):
+            raise TypeError("Can only add PropertyAmenity to a Property")
+            
+        # Aggiorna descrizione custom se presente
+        if custom_description:
+            amenity.custom_description = custom_description
+
+        # Controllo duplicati basato su ID per evitare di aggiungere lo stesso servizio due volte
+        exists = any(a.id == amenity.id for a in self.amenities)
+        
+        if not exists:
+            self.amenities.append(amenity)
+        else:
+            # Se esiste già, aggiorniamo la descrizione (logica opzionale ma utile)
+            for a in self.amenities:
+                if a.id == amenity.id:
+                    a.custom_description = custom_description

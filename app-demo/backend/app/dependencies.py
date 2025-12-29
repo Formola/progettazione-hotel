@@ -16,7 +16,7 @@ from app.services.room_service import RoomService
 from app.repositories.media_repository import MediaRepository
 from app.services.media_service import MediaService
 from app.repositories.amenity_repository import PropertyAmenityRepository, RoomAmenityRepository
-
+from app.storage.s3_media_storage import S3MediaStorage
 
 def get_user_repo(db: Session = Depends(get_db)) -> UserRepository:
     return UserRepository(db)
@@ -99,10 +99,14 @@ def get_room_amenity_repo(db: Session = Depends(get_db)):
 def get_media_repo(db: Session = Depends(get_db)):
     return MediaRepository(db)
 
+def get_s3_media_storage() -> S3MediaStorage:
+    return S3MediaStorage()
+
 def get_media_service(
-    media_repo: MediaRepository = Depends(get_media_repo)
+    media_repo: MediaRepository = Depends(get_media_repo),
+    s3_storage: S3MediaStorage = Depends(get_s3_media_storage)
 ) -> MediaService:
-    return MediaService(media_repo)
+    return MediaService(media_repo, s3_storage)
 
 ## PROPERTY
 

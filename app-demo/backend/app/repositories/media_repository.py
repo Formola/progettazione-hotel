@@ -16,8 +16,9 @@ class MediaRepository:
 
     def save(self, entity: entities.Media, property_id: str = None, room_id: str = None):
         """
-        Salva i metadati del media. 
-        Nota: richiede i foreign keys espliciti se è un nuovo inserimento.
+        Saves or updates a Media entity in the database.
+            - If the media with the given ID exists, it updates its fields.
+            - If it does not exist, it creates a new record.
         """
         model = self.db.query(models.MediaModel).get(entity.id)
         

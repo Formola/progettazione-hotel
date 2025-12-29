@@ -1,7 +1,7 @@
 import boto3
 from botocore.exceptions import ClientError
 from app.config import settings
-from app.storage.base import IMediaStorage
+from app.storage.media_storage_interface import IMediaStorage
 
 class S3MediaStorage(IMediaStorage):
     def __init__(self):

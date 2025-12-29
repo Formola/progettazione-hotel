@@ -3,50 +3,59 @@
 // ==========================================
 export type PropertyStatus = 'DRAFT' | 'PUBLISHED' | 'INACTIVE';
 export type RoomType = 'SINGLE' | 'DOUBLE' | 'SUITE';
-export type MediaType = 'image/png' | 'video/mp4';
+export type MediaType = 'image/png' | 'image/jpeg' | 'video/mp4'; 
 export type UserRole = 'GUEST' | 'OWNER' | 'ADMIN';
 
 // ==========================================
 // MEDIA (Immagini/Video)
 // ==========================================
 
-// INPUT: Payload per caricare un file (POST /api/media)
-// Questo si usa sia per property/{id}/media che per rooms/{id}/media
+// INPUT: Payload per caricare un file
 export interface MediaUpload {
-    fileName: string;
+    fileName: string;     
     fileType: MediaType;
     base64Data: string; 
     description?: string;
 }
 
-// OUTPUT: Oggetto visualizzato nel carosello
+// OUTPUT: Oggetto visualizzato nel carosello (Match JSON Backend)
 export interface MediaData {
     id: string;
-    file_name?: string;
-    file_type?: MediaType;
-    storage_path: string; // URL diretto (come restituito da Python)
-    description?: string;
-
+    file_name: string;    // Nel JSON è snake_case
+    file_type: string;    // Nel JSON è snake_case ("image/png")
+    storage_path: string; 
+    description?: string | null; // Il backend può mandare null
 }
-
 
 // ==========================================
 // AMENITIES (Servizi)
 // ==========================================
 
-// Interfaccia Base (non esportata, serve solo per non ripetere codice)
+// Interfaccia Base
 interface BaseAmenity {
     id: string;
     name: string;
     category: string;
-    icon?: string;
+    icon?: string; // Se lo gestisci nel frontend mapping
+    
+    description?: string | null;       // Descrizione generica (dal catalogo)
+    custom_description?: string | null;// Descrizione specifica (es. "Fibra 1GB")
 }
 
 // OUTPUT: Distinzione semantica
-// (Utile per Type Safety: non puoi passare una RoomAmenity dove serve una PropertyAmenity)
-// In futuro potrebbero avere campi diversi
 export interface PropertyAmenity extends BaseAmenity {}
 export interface RoomAmenity extends BaseAmenity {}
+
+export interface NewAmenityInput {
+    name: string;
+    category: string;
+    description?: string;
+}
+
+export interface AmenityLinkInput {
+    id: string;
+    custom_description?: string;
+}
 
 // ==========================================
 // ROOMS
@@ -59,18 +68,24 @@ export interface RoomInput {
     price: number;
     capacity: number;
     
-    // L'Owner seleziona ID dalla lista "Room Amenities"
-    amenity_ids: string[]; 
+    // Collegamento ID esistenti
+    amenities: AmenityLinkInput[];    
+    // Se il backend supporta new_amenities nel payload principale
+    new_amenities?: NewAmenityInput[]; 
+    
+    media_ids?: string[];
 }
 
 // OUTPUT: Visualizzazione Stanza
-export interface RoomData extends Omit<RoomInput, 'amenity_ids'> {
+export interface RoomData {
     id: string;
+    type: RoomType;    
+    description?: string | null;
+    price: number;
+    capacity: number;
     
-    // Qui ricevi gli oggetti specifici per la stanza
     amenities: RoomAmenity[];  
     
-    // Ogni stanza ha le sue foto specifiche
     media: MediaData[];        
 }
 
@@ -86,24 +101,29 @@ export interface PropertyInput {
     country: string;
     description: string;
     
-    // L'Owner seleziona ID dalla lista "Property Amenities"
-    amenity_ids: string[]; 
+    amenities: AmenityLinkInput[];
+    media_ids?: string[];
 }
 
 // OUTPUT: Scheda completa per la UI
-export interface PropertyData extends Omit<PropertyInput, 'amenity_ids'> {
+export interface PropertyData {
     id: string;
+    name: string;
+    address: string;
+    city: string;
+    country: string;
+    description?: string | null;
     status: PropertyStatus; 
+    
     owner: {
         id: string;
         name: string;
         email: string;
     };       
     
-    // Liste popolate
-    amenities: PropertyAmenity[]; // Solo servizi generali della casa
-    rooms: RoomData[];            // Lista delle stanze
-    media: MediaData[];           // Foto generali della casa (facciata, piscina)
+    amenities: PropertyAmenity[]; 
+    rooms: RoomData[];            
+    media: MediaData[];           
 }
 
 // ==========================================

@@ -1,9 +1,11 @@
-from typing import List, Dict, Any
+from typing import List, Optional
+from app.domain import entities # <--- Importa entities
 from app.repositories.search_repository import SearchRepository
 
 class SearchService:
     def __init__(self, search_repo: SearchRepository):
         self.search_repo = search_repo
 
-    def search(self, location: str = None) -> List[Dict[str, Any]]:
+    # Ritorna una lista di Entità di Dominio, non Dizionari
+    def search(self, location: str = None) -> List[entities.Property]:
         return self.search_repo.search_properties(location)

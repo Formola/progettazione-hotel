@@ -84,6 +84,28 @@ def to_domain_user(model: models.UserModel) -> entities.User:
 # ==========================================
 
 def to_domain_room(model: models.RoomModel) -> entities.Room:
+    if not model:
+        return None
+    
+    # MAPPING AMENITIES
+    # Iteriamo sui LINK, non direttamente sulle amenities
+    domain_amenities = []
+    for link in model.amenity_links:
+        # link.amenity è l'oggetto RoomAmenityModel (catalogo)
+        # link.custom_description è il testo personalizzato nella tabella link
+        domain_amenities.append(
+            entities.RoomAmenity(
+                id=link.amenity.id,
+                name=link.amenity.name,
+                category=link.amenity.category,
+                description=link.amenity.description,
+                custom_description=link.custom_description
+            )
+        )
+
+    # MAPPING MEDIA
+    domain_media = [to_domain_media(m) for m in model.media]
+
     return entities.Room(
         id=model.id,
         property_id=model.property_id,
@@ -92,13 +114,11 @@ def to_domain_room(model: models.RoomModel) -> entities.Room:
         capacity=model.capacity,
         description=model.description,
         is_available=model.is_available,
-        media=[to_domain_media(m) for m in model.media],
-        amenities=[to_domain_room_amenity(a) for a in model.amenities]
+        amenities=domain_amenities,
+        media=domain_media
     )
 
 def to_model_room(entity: entities.Room) -> models.RoomModel:
-    # Nota: NON mappiamo media e amenities qui dentro per il save.
-    # Le gestiremo esplicitamente nel repository per fare il "diffing".
     return models.RoomModel(
         id=entity.id,
         property_id=entity.property_id,
@@ -114,23 +134,37 @@ def to_model_room(entity: entities.Room) -> models.RoomModel:
 # ==========================================
 
 def to_domain_property(model: models.PropertyModel) -> entities.Property:
+    if not model:
+        return None
+
+    # MAPPING AMENITIES (CORRETTO PER ASSOCIATION OBJECT)
+    domain_amenities = []
+    if model.amenity_links: # Iteriamo sui LINK, non su model.amenities
+        for link in model.amenity_links:
+            domain_amenities.append(
+                entities.PropertyAmenity(
+                    id=link.amenity.id,
+                    name=link.amenity.name,
+                    category=link.amenity.category,
+                    description=link.amenity.description,
+                    custom_description=link.custom_description # Campo Custom
+                )
+            )
+
     return entities.Property(
         id=model.id,
-        # Qui passiamo l'ID perché viene dal DB
-        owner_id=model.owner_id, 
-        
+        owner_id=model.owner_id,
         name=model.name,
         address=model.address,
         city=model.city,
         country=model.country,
         description=model.description,
-        status=entities.PropertyStatus(model.status),
+        status=entities.PropertyStatus(model.status) if model.status else entities.PropertyStatus.DRAFT,
         
         rooms=[to_domain_room(r) for r in model.rooms],
-        amenities=[to_domain_property_amenity(a) for a in model.amenities],
+        amenities=domain_amenities,
         media=[to_domain_media(m) for m in model.media],
         
-        # Qui passiamo l'Owner se SQLAlchemy lo ha caricato, altrimenti None
         owner=to_domain_user(model.owner) 
     )
 
@@ -143,7 +177,7 @@ def to_model_property(entity: entities.Property) -> models.PropertyModel:
         city=entity.city,
         country=entity.country,
         description=entity.description,
-        status=entity.status.value # Enum -> String
+        status=entity.status.value
     )
     
 def to_domain_media(model: models.MediaModel) -> entities.Media:

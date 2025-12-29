@@ -5,13 +5,13 @@ from typing import Optional
 
 from app.domain import entities
 from app.repositories.media_repository import MediaRepository
-from app.storage.base import IMediaStorage
+from app.storage.media_storage_interface import IMediaStorage
 from app.schemas import MediaInput
 
 class MediaService:
-    def __init__(self, media_repo: MediaRepository, storage: IMediaStorage):
+    def __init__(self, media_repo: MediaRepository, s3_storage: IMediaStorage):
         self.media_repo = media_repo
-        self.storage = storage
+        self.s3_storage = s3_storage
 
     def upload_media(self, data: MediaInput) -> entities.Media:
         # Generazione ID e Nome File Univoco
@@ -27,7 +27,7 @@ class MediaService:
 
         # Upload Fisico (tramite Interfaccia)
         # Il service non sa se sta usando S3 o LocalStack o Disco
-        storage_path = self.storage.store_media(
+        storage_path = self.s3_storage.store_media(
             file_name=unique_filename,
             file_data=file_bytes,
             content_type=data.file_type.value # Enum -> str
@@ -54,7 +54,7 @@ class MediaService:
         media = self.media_repo.get_by_id(media_id)
         if media:
             # Cancella da S3
-            self.storage.delete_media(media.storage_path)
+            self.s3_storage.delete_media(media.storage_path)
             # Cancella da DB
             self.media_repo.delete(media_id)
             

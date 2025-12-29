@@ -42,10 +42,10 @@ class PropertyService:
         final_amenities = []
 
         # AMENITIES ESISTENTI (Solo ID)
-        # Creiamo stub fittizi, il repo PropertyRepository farà il link leggendo l'ID
-        for aid in data.amenity_ids:
-            # Usiamo la factory anche qui, passando solo l'ID
-            stub = self.property_amenity_factory.create_amenity(id=aid)
+        for item in data.amenities:
+            stub = self.property_amenity_factory.create_amenity(id=item.id)
+            if item.custom_description:
+                stub.custom_description = item.custom_description
             final_amenities.append(stub)
 
         # NUOVE AMENITIES (Name + Category)
@@ -137,8 +137,10 @@ class PropertyService:
 
         # AMENITIES ESISTENTI (Solo ID)
         final_amenities = []
-        for aid in data.amenity_ids:
-            stub = self.property_amenity_factory.create_amenity(id=aid)
+        for item in data.amenities:
+            stub = self.property_amenity_factory.create_amenity(id=item.id)
+            if item.custom_description:
+                stub.custom_description = item.custom_description
             final_amenities.append(stub)
 
         # NUOVE AMENITIES (Name + Category)

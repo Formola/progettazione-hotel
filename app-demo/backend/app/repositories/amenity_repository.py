@@ -1,6 +1,4 @@
-# app/repositories/amenity_repository.py
 from abc import ABC, abstractmethod
-import uuid
 from typing import Optional
 from sqlalchemy.orm import Session
 from app.domain import entities
@@ -27,17 +25,21 @@ class PropertyAmenityRepository(AmenityRepository):
     def save(self, entity: entities.PropertyAmenity) -> entities.PropertyAmenity:
         # Check se esiste già (per ID)
         model = self.db.query(models.PropertyAmenityModel).get(entity.id)
+        
         if not model:
+            # INSERT
             model = models.PropertyAmenityModel(
                 id=entity.id,
                 name=entity.name,
                 category=entity.category,
                 description=entity.description
+                # NOTA: Qui NON salviamo custom_description, perché questa è la tabella del dominio, non il link
             )
             self.db.add(model)
         else:
-            # Update (opzionale, se volessimo modificare amenities esistenti)
+            # UPDATE (Aggiorniamo i dati del catalogo se sono cambiati)
             model.name = entity.name
+            model.category = entity.category
             model.description = entity.description
         
         self.db.commit()
@@ -59,6 +61,21 @@ class PropertyAmenityRepository(AmenityRepository):
             category=model.category,
             description=model.description
         )
+        
+    def get_by_name(self, name: str) -> Optional[entities.PropertyAmenity]:
+        model = (
+            self.db.query(models.PropertyAmenityModel)
+            .filter(models.PropertyAmenityModel.name.ilike(name))
+            .first()
+        )
+        if not model:
+            return None
+        return entities.PropertyAmenity(
+            id=model.id,
+            name=model.name,
+            category=model.category,
+            description=model.description
+        )
 
 class RoomAmenityRepository(AmenityRepository):
     def __init__(self, db: Session):
@@ -66,7 +83,9 @@ class RoomAmenityRepository(AmenityRepository):
 
     def save(self, entity: entities.RoomAmenity) -> entities.RoomAmenity:
         model = self.db.query(models.RoomAmenityModel).get(entity.id)
+        
         if not model:
+            # INSERT
             model = models.RoomAmenityModel(
                 id=entity.id,
                 name=entity.name,
@@ -74,6 +93,11 @@ class RoomAmenityRepository(AmenityRepository):
                 description=entity.description
             )
             self.db.add(model)
+        else:
+            model.name = entity.name
+            model.category = entity.category
+            model.description = entity.description
+            
         self.db.commit()
         return entity
     
@@ -85,6 +109,21 @@ class RoomAmenityRepository(AmenityRepository):
             
     def get_by_id(self, amenity_id: str) -> Optional[entities.RoomAmenity]:
         model = self.db.query(models.RoomAmenityModel).get(amenity_id)
+        if not model:
+            return None
+        return entities.RoomAmenity(
+            id=model.id,
+            name=model.name,
+            category=model.category,
+            description=model.description
+        )
+    
+    def get_by_name(self, name: str) -> Optional[entities.RoomAmenity]:
+        model = (
+            self.db.query(models.RoomAmenityModel)
+            .filter(models.RoomAmenityModel.name.ilike(name))
+            .first()
+        )
         if not model:
             return None
         return entities.RoomAmenity(

@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS room_amenities (
 CREATE TABLE IF NOT EXISTS property_amenities_link (
     property_id VARCHAR(50) NOT NULL,
     amenity_id VARCHAR(50) NOT NULL,
-    added_by VARCHAR(50), -- Opzionale: chi ha aggiunto il servizio (admin/owner)
+    custom_description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     PRIMARY KEY (property_id, amenity_id), -- Chiave composta
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS property_amenities_link (
 CREATE TABLE IF NOT EXISTS room_amenities_link (
     room_id VARCHAR(50) NOT NULL,
     amenity_id VARCHAR(50) NOT NULL,
-    added_by VARCHAR(50),
+    custom_description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     PRIMARY KEY (room_id, amenity_id), -- Chiave composta
@@ -244,99 +244,99 @@ ON CONFLICT (id) DO NOTHING;
 -- ==========================================
 
 -- prop_01: Dragonfly Inn (Cozy inn) → WiFi, Parking, Restaurant, Reception
-INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
-('prop_01', 'pa_wifi'),
-('prop_01', 'pa_parking'),
-('prop_01', 'pa_restaurant'),
-('prop_01', 'pa_reception24')
+INSERT INTO property_amenities_link (property_id, amenity_id, custom_description) VALUES
+('prop_01', 'pa_wifi', 'High speed fiber optic everywhere'),
+('prop_01', 'pa_parking', 'Free vallet parking'),
+('prop_01', 'pa_restaurant', 'Gourmet on-site restaurant'),
+('prop_01', 'pa_reception24', '24/7 front desk service')
 ON CONFLICT (property_id, amenity_id) DO NOTHING;
 
 -- prop_02: Bates Motel (Budget motel) → WiFi, Parking
-INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
-('prop_02', 'pa_wifi'),
-('prop_02', 'pa_parking')
+INSERT INTO property_amenities_link (property_id, amenity_id, custom_description) VALUES
+('prop_02', 'pa_wifi', 'Basic free WiFi in rooms'),
+('prop_02', 'pa_parking', 'Free parking available')
 ON CONFLICT (property_id, amenity_id) DO NOTHING;
 
 -- prop_03: Overlook Hotel (Grand hotel) → WiFi, Pool, Gym, Restaurant, Bar, Reception
-INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
-('prop_03', 'pa_wifi'),
-('prop_03', 'pa_pool'),
-('prop_03', 'pa_gym'),
-('prop_03', 'pa_restaurant'),
-('prop_03', 'pa_bar'),
-('prop_03', 'pa_reception24')
+INSERT INTO property_amenities_link (property_id, amenity_id, custom_description) VALUES
+('prop_03', 'pa_wifi', 'High-speed WiFi throughout the hotel'),
+('prop_03', 'pa_pool', 'Indoor heated pool available year-round'),
+('prop_03', 'pa_gym', 'Fully equipped fitness center'),
+('prop_03', 'pa_restaurant', 'Fine dining restaurant with local cuisine'),
+('prop_03', 'pa_bar', 'Cozy bar with a wide selection of drinks'),
+('prop_03', 'pa_reception24', '24/7 front desk service')
 ON CONFLICT (property_id, amenity_id) DO NOTHING;
 
 -- prop_04: Continental Hotel (Luxury) → ALL amenities except Beach
-INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
-('prop_04', 'pa_wifi'),
-('prop_04', 'pa_pool'),
-('prop_04', 'pa_parking'),
-('prop_04', 'pa_gym'),
-('prop_04', 'pa_spa'),
-('prop_04', 'pa_restaurant'),
-('prop_04', 'pa_bar'),
-('prop_04', 'pa_pets'),
-('prop_04', 'pa_reception24')
+INSERT INTO property_amenities_link (property_id, amenity_id, custom_description) VALUES
+('prop_04', 'pa_wifi', 'Ultra-fast premium WiFi'),
+('prop_04', 'pa_pool', 'Indoor heated pool available year-round'),
+('prop_04', 'pa_parking', 'Valet parking service'),
+('prop_04', 'pa_gym', 'State-of-the-art fitness center'),
+('prop_04', 'pa_spa', 'Full-service spa and wellness center'),
+('prop_04', 'pa_restaurant', 'Gourmet dining with international cuisine'),
+('prop_04', 'pa_bar', 'Elegant bar with premium selection'),
+('prop_04', 'pa_pets', 'Pet-friendly accommodations'),
+('prop_04', 'pa_reception24', '24/7 front desk service')
 ON CONFLICT (property_id, amenity_id) DO NOTHING;
 
 -- prop_05: Hotel California → WiFi, Pool, Bar, Parking
-INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
-('prop_05', 'pa_wifi'),
-('prop_05', 'pa_pool'),
-('prop_05', 'pa_bar'),
-('prop_05', 'pa_parking')
+INSERT INTO property_amenities_link (property_id, amenity_id, custom_description) VALUES
+('prop_05', 'pa_wifi', 'Reliable WiFi for all guests'),
+('prop_05', 'pa_pool', 'Outdoor pool with sun loungers'),
+('prop_05', 'pa_bar', 'Casual bar with live music'),
+('prop_05', 'pa_parking', 'Ample free parking space')
 ON CONFLICT (property_id, amenity_id) DO NOTHING;
 
 -- prop_06: Grand Budapest (Elegant) → WiFi, Restaurant, Bar, Reception, Spa
-INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
-('prop_06', 'pa_wifi'),
-('prop_06', 'pa_restaurant'),
-('prop_06', 'pa_bar'),
-('prop_06', 'pa_reception24'),
-('prop_06', 'pa_spa')
+INSERT INTO property_amenities_link (property_id, amenity_id, custom_description) VALUES
+('prop_06', 'pa_wifi', 'High-speed WiFi throughout the hotel'),
+('prop_06', 'pa_restaurant', 'Fine dining restaurant with local cuisine'),
+('prop_06', 'pa_bar', 'Cozy bar with a wide selection of drinks'),
+('prop_06', 'pa_reception24', '24/7 front desk service'),
+('prop_06', 'pa_spa', 'Full-service spa and wellness center')
 ON CONFLICT (property_id, amenity_id) DO NOTHING;
 
 -- prop_07: The Great Northern (Mountain lodge) → WiFi, Restaurant, Bar, Parking
-INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
-('prop_07', 'pa_wifi'),
-('prop_07', 'pa_restaurant'),
-('prop_07', 'pa_bar'),
-('prop_07', 'pa_parking')
+INSERT INTO property_amenities_link (property_id, amenity_id, custom_description) VALUES
+('prop_07', 'pa_wifi', 'Reliable WiFi for all guests'),
+('prop_07', 'pa_restaurant', 'Cozy mountain lodge restaurant'),
+('prop_07', 'pa_bar', 'Rustic bar with local brews'),
+('prop_07', 'pa_parking', 'Free parking available')
 ON CONFLICT (property_id, amenity_id) DO NOTHING;
 
 -- prop_08: Beverly Hills Hotel (Glamorous) → ALL amenities except Beach
-INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
-('prop_08', 'pa_wifi'),
-('prop_08', 'pa_pool'),
-('prop_08', 'pa_parking'),
-('prop_08', 'pa_gym'),
-('prop_08', 'pa_spa'),
-('prop_08', 'pa_restaurant'),
-('prop_08', 'pa_bar'),
-('prop_08', 'pa_pets'),
-('prop_08', 'pa_reception24')
+INSERT INTO property_amenities_link (property_id, amenity_id, custom_description) VALUES
+('prop_08', 'pa_wifi', 'Beverly Hills premium WiFi'),
+('prop_08', 'pa_pool', 'Luxurious outdoor pool with cabanas'),
+('prop_08', 'pa_parking', 'Valet parking service'),
+('prop_08', 'pa_gym', 'State-of-the-art fitness center'),
+('prop_08', 'pa_spa', 'Full-service spa and wellness center'),
+('prop_08', 'pa_restaurant', 'Gourmet dining with international cuisine'),
+('prop_08', 'pa_bar', 'Elegant bar with premium selection'),
+('prop_08', 'pa_pets', 'Pet-friendly accommodations'),
+('prop_08', 'pa_reception24', '24/7 front desk service')
 ON CONFLICT (property_id, amenity_id) DO NOTHING;
 
 -- prop_09: Radisson Blue Paris (Modern) → WiFi, Gym, Restaurant, Bar, Reception
-INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
-('prop_09', 'pa_wifi'),
-('prop_09', 'pa_gym'),
-('prop_09', 'pa_restaurant'),
-('prop_09', 'pa_bar'),
-('prop_09', 'pa_reception24')
+INSERT INTO property_amenities_link (property_id, amenity_id, custom_description) VALUES
+('prop_09', 'pa_wifi', 'High-speed WiFi throughout the hotel'),
+('prop_09', 'pa_gym', 'State-of-the-art fitness center'),
+('prop_09', 'pa_restaurant', 'Modern restaurant with diverse menu'),
+('prop_09', 'pa_bar', 'Trendy bar with craft cocktails'),
+('prop_09', 'pa_reception24', '24/7 front desk service')
 ON CONFLICT (property_id, amenity_id) DO NOTHING;
 
 -- prop_10: Plaza Hotel (Iconic luxury) → ALL amenities except Beach and Pets
-INSERT INTO property_amenities_link (property_id, amenity_id) VALUES
-('prop_10', 'pa_wifi'),
-('prop_10', 'pa_pool'),
-('prop_10', 'pa_parking'),
-('prop_10', 'pa_gym'),
-('prop_10', 'pa_spa'),
-('prop_10', 'pa_restaurant'),
-('prop_10', 'pa_bar'),
-('prop_10', 'pa_reception24')
+INSERT INTO property_amenities_link (property_id, amenity_id, custom_description) VALUES
+('prop_10', 'pa_wifi', 'High-speed WiFi throughout the hotel'),
+('prop_10', 'pa_pool', 'Luxurious outdoor pool with cabanas'),
+('prop_10', 'pa_parking', 'Valet parking service'),
+('prop_10', 'pa_gym', 'State-of-the-art fitness center'),
+('prop_10', 'pa_spa', 'Full-service spa and wellness center'),
+('prop_10', 'pa_restaurant', 'Gourmet dining with international cuisine'),
+('prop_10', 'pa_bar', 'Elegant bar with premium selection'),
+('prop_10', 'pa_reception24', '24/7 front desk service')
 ON CONFLICT (property_id, amenity_id) DO NOTHING;
 
 -- ==========================================
@@ -388,115 +388,120 @@ ON CONFLICT (id) DO NOTHING;
 -- ==========================================
 
 -- Stanze SINGOLE → Base amenities (AC, TV, Hairdryer)
-INSERT INTO room_amenities_link (room_id, amenity_id) VALUES
-('room_01_1', 'ra_ac'),
-('room_01_1', 'ra_tv'),
-('room_01_1', 'ra_hairdryer'),
+-- custom description is specific for the room of that amenity for that room in that hotel
+-- differs from basic description in room_amenities table
+INSERT INTO room_amenities_link (room_id, amenity_id, custom_description) VALUES
+('room_01_1', 'ra_ac', 'This room has a modern air conditioning system.'),
+('room_01_1', 'ra_tv', 'Flat-screen TV with cable channels.'),
+('room_01_1', 'ra_hairdryer', 'In-room hairdryer for your convenience.'),
 
-('room_03_1', 'ra_ac'),
-('room_03_1', 'ra_tv'),
-('room_03_1', 'ra_hairdryer'),
+('room_03_1', 'ra_ac', 'New air conditioning unit installed.'),
+('room_03_1', 'ra_tv', '42-inch flat-screen TV with satellite channels.'),
+('room_03_1', 'ra_hairdryer', 'Special hairdryer with multiple settings.'),
 
-('room_05_1', 'ra_ac'),
-('room_05_1', 'ra_tv'),
-('room_05_1', 'ra_hairdryer'),
+('room_05_1', 'ra_ac', 'Quiet air conditioning for a restful sleep.'),
+('room_05_1', 'ra_tv', 'Smart TV with streaming apps available.'),
+('room_05_1', 'ra_hairdryer', 'Compact hairdryer for easy use.'),
 
-('room_07_1', 'ra_ac'),
-('room_07_1', 'ra_tv'),
-('room_07_1', 'ra_hairdryer'),
 
-('room_09_1', 'ra_ac'),
-('room_09_1', 'ra_tv'),
-('room_09_1', 'ra_hairdryer')
+('room_07_1', 'ra_ac', 'Energy-efficient air conditioning system.'),
+('room_07_1', 'ra_tv', 'Television with local and international channels.'),
+('room_07_1', 'ra_hairdryer', 'Hairdryer with multiple heat settings.'),
+
+('room_09_1', 'ra_ac', 'Standard air conditioning unit.'),
+('room_09_1', 'ra_tv', 'Basic television with cable channels.'),
+('room_09_1', 'ra_hairdryer', 'Compact hairdryer for guest use.')
 ON CONFLICT (room_id, amenity_id) DO NOTHING;
 
 -- Stanze DOPPIE → Base + Minibar
-INSERT INTO room_amenities_link (room_id, amenity_id) VALUES
-('room_01_2', 'ra_ac'),
-('room_01_2', 'ra_tv'),
-('room_01_2', 'ra_hairdryer'),
-('room_01_2', 'ra_minibar'),
+INSERT INTO room_amenities_link (room_id, amenity_id, custom_description) VALUES
+('room_01_2', 'ra_ac', 'Air conditioning individually adjustable for double room comfort'),
+('room_01_2', 'ra_tv', '32-inch flat-screen TV with international channels'),
+('room_01_2', 'ra_hairdryer', 'Wall-mounted hairdryer suitable for daily use'),
+('room_01_2', 'ra_minibar', 'Minibar stocked with soft drinks and snacks'),
 
-('room_02_1', 'ra_ac'),
-('room_02_1', 'ra_tv'),
-('room_02_1', 'ra_hairdryer'),
-('room_02_1', 'ra_minibar'),
+('room_02_1', 'ra_ac', 'Silent air conditioning system ideal for couples'),
+('room_02_1', 'ra_tv', 'Smart TV with streaming services enabled'),
+('room_02_1', 'ra_hairdryer', 'Compact hairdryer with medium airflow'),
+('room_02_1', 'ra_minibar', 'Minibar including water, juices and beer'),
 
-('room_03_2', 'ra_ac'),
-('room_03_2', 'ra_tv'),
-('room_03_2', 'ra_hairdryer'),
-('room_03_2', 'ra_minibar'),
+('room_03_2', 'ra_ac', 'Climate control system with night mode'),
+('room_03_2', 'ra_tv', 'LED TV positioned opposite the bed'),
+('room_03_2', 'ra_hairdryer', 'Hairdryer available in the private bathroom'),
+('room_03_2', 'ra_minibar', 'Minibar with complimentary bottled water'),
 
-('room_05_2', 'ra_ac'),
-('room_05_2', 'ra_tv'),
-('room_05_2', 'ra_hairdryer'),
-('room_05_2', 'ra_minibar'),
+('room_05_2', 'ra_ac', 'Independent air conditioning with digital thermostat'),
+('room_05_2', 'ra_tv', 'Cable TV with movie and sports channels'),
+('room_05_2', 'ra_hairdryer', 'High-power hairdryer for long hair'),
+('room_05_2', 'ra_minibar', 'Minibar refreshed daily'),
 
-('room_06_1', 'ra_ac'),
-('room_06_1', 'ra_tv'),
-('room_06_1', 'ra_hairdryer'),
-('room_06_1', 'ra_minibar'),
+('room_06_1', 'ra_ac', 'Energy-efficient air conditioning unit'),
+('room_06_1', 'ra_tv', 'Flat-screen TV mounted on the wall'),
+('room_06_1', 'ra_hairdryer', 'Bathroom hairdryer with safety switch'),
+('room_06_1', 'ra_minibar', 'Minibar with selection of local beverages'),
 
-('room_07_2', 'ra_ac'),
-('room_07_2', 'ra_tv'),
-('room_07_2', 'ra_hairdryer'),
-('room_07_2', 'ra_minibar'),
+('room_07_2', 'ra_ac', 'Adjustable air conditioning for optimal temperature'),
+('room_07_2', 'ra_tv', 'Smart TV with HDMI connectivity'),
+('room_07_2', 'ra_hairdryer', 'Hairdryer with concentrator nozzle'),
+('room_07_2', 'ra_minibar', 'Minibar including premium snacks'),
 
-('room_08_1', 'ra_ac'),
-('room_08_1', 'ra_tv'),
-('room_08_1', 'ra_hairdryer'),
-('room_08_1', 'ra_minibar'),
+('room_08_1', 'ra_ac', 'Quiet air conditioning suitable for light sleepers'),
+('room_08_1', 'ra_tv', 'TV with satellite channels'),
+('room_08_1', 'ra_hairdryer', 'Compact hairdryer provided'),
+('room_08_1', 'ra_minibar', 'Minibar with complimentary refreshments'),
 
-('room_09_2', 'ra_ac'),
-('room_09_2', 'ra_tv'),
-('room_09_2', 'ra_hairdryer'),
-('room_09_2', 'ra_minibar')
+('room_09_2', 'ra_ac', 'Air conditioning with eco mode'),
+('room_09_2', 'ra_tv', 'Flat-screen TV with multilingual channels'),
+('room_09_2', 'ra_hairdryer', 'Hairdryer available in ensuite bathroom'),
+('room_09_2', 'ra_minibar', 'Minibar suitable for short stays')
 ON CONFLICT (room_id, amenity_id) DO NOTHING;
+
 
 -- Stanze SUITE → ALL amenities
-INSERT INTO room_amenities_link (room_id, amenity_id) VALUES
-('room_01_3', 'ra_ac'),
-('room_01_3', 'ra_tv'),
-('room_01_3', 'ra_hairdryer'),
-('room_01_3', 'ra_minibar'),
-('room_01_3', 'ra_safe'),
-('room_01_3', 'ra_balcony'),
+INSERT INTO room_amenities_link (room_id, amenity_id, custom_description) VALUES
+('room_01_3', 'ra_ac', 'Premium air conditioning with separate living area control'),
+('room_01_3', 'ra_tv', '55-inch Smart TV in living area'),
+('room_01_3', 'ra_hairdryer', 'Professional hairdryer with multiple heat settings'),
+('room_01_3', 'ra_minibar', 'Fully stocked minibar with premium drinks'),
+('room_01_3', 'ra_safe', 'Electronic safe suitable for laptops'),
+('room_01_3', 'ra_balcony', 'Private balcony with panoramic city view'),
 
-('room_02_2', 'ra_ac'),
-('room_02_2', 'ra_tv'),
-('room_02_2', 'ra_hairdryer'),
-('room_02_2', 'ra_minibar'),
-('room_02_2', 'ra_safe'),
-('room_02_2', 'ra_balcony'),
+('room_02_2', 'ra_ac', 'Advanced climate control system for suite'),
+('room_02_2', 'ra_tv', 'Large Smart TV with surround sound'),
+('room_02_2', 'ra_hairdryer', 'High-end hairdryer with diffuser'),
+('room_02_2', 'ra_minibar', 'Minibar with champagne selection'),
+('room_02_2', 'ra_safe', 'Digital safe with personal code'),
+('room_02_2', 'ra_balcony', 'Spacious balcony with outdoor seating'),
 
-('room_04_1', 'ra_ac'),
-('room_04_1', 'ra_tv'),
-('room_04_1', 'ra_hairdryer'),
-('room_04_1', 'ra_minibar'),
-('room_04_1', 'ra_safe'),
-('room_04_1', 'ra_balcony'),
+('room_04_1', 'ra_ac', 'Luxury air conditioning with zone regulation'),
+('room_04_1', 'ra_tv', 'Smart TV available in both bedroom and lounge'),
+('room_04_1', 'ra_hairdryer', 'Premium bathroom hairdryer'),
+('room_04_1', 'ra_minibar', 'Minibar replenished daily with gourmet items'),
+('room_04_1', 'ra_safe', 'Secure safe integrated into wardrobe'),
+('room_04_1', 'ra_balcony', 'Balcony overlooking the garden'),
 
-('room_06_2', 'ra_ac'),
-('room_06_2', 'ra_tv'),
-('room_06_2', 'ra_hairdryer'),
-('room_06_2', 'ra_minibar'),
-('room_06_2', 'ra_safe'),
-('room_06_2', 'ra_balcony'),
+('room_06_2', 'ra_ac', 'Silent air conditioning system with smart sensors'),
+('room_06_2', 'ra_tv', 'Ultra HD Smart TV with streaming platforms'),
+('room_06_2', 'ra_hairdryer', 'Salon-grade hairdryer'),
+('room_06_2', 'ra_minibar', 'Exclusive minibar with premium spirits'),
+('room_06_2', 'ra_safe', 'Spacious electronic safe'),
+('room_06_2', 'ra_balcony', 'Private balcony with lounge chairs'),
 
-('room_07_3', 'ra_ac'),
-('room_07_3', 'ra_tv'),
-('room_07_3', 'ra_hairdryer'),
-('room_07_3', 'ra_minibar'),
-('room_07_3', 'ra_safe'),
-('room_07_3', 'ra_balcony'),
+('room_07_3', 'ra_ac', 'High-performance air conditioning for large suite'),
+('room_07_3', 'ra_tv', 'Dual Smart TVs in bedroom and living room'),
+('room_07_3', 'ra_hairdryer', 'Professional hairdryer with ionic technology'),
+('room_07_3', 'ra_minibar', 'Luxury minibar with curated selections'),
+('room_07_3', 'ra_safe', 'In-room safe with biometric lock'),
+('room_07_3', 'ra_balcony', 'Corner balcony with extended view'),
 
-('room_10_1', 'ra_ac'),
-('room_10_1', 'ra_tv'),
-('room_10_1', 'ra_hairdryer'),
-('room_10_1', 'ra_minibar'),
-('room_10_1', 'ra_safe'),
-('room_10_1', 'ra_balcony')
+('room_10_1', 'ra_ac', 'Top-tier climate system with personalized presets'),
+('room_10_1', 'ra_tv', 'Cinema-size Smart TV'),
+('room_10_1', 'ra_hairdryer', 'Designer hairdryer with premium finish'),
+('room_10_1', 'ra_minibar', 'Minibar featuring local artisan products'),
+('room_10_1', 'ra_safe', 'Extra-large digital safe'),
+('room_10_1', 'ra_balcony', 'Exclusive terrace with city skyline view')
 ON CONFLICT (room_id, amenity_id) DO NOTHING;
+
 
 -- ==========================================
 -- MEDIA (property e qualche di seed)
