@@ -41,10 +41,10 @@ def get_or_create_user_from_headers(
     return user
 
 
-def get_current_owner(
+def get_current_user(
     x_user_cognito_sub: str = Header(..., alias="x-user-cognito-sub"),
-    x_user_email: str = Header(..., alias="x-user-email"),
-    x_user_role: str = Header(..., alias="x-user-role"),
+    x_user_email: Optional[str] = Header(..., alias="x-user-email"),
+    x_user_role: Optional[str] = Header(..., alias="x-user-role"),
     user_repo: UserRepository = Depends(get_user_repo)
 ) -> entities.User:
 
@@ -93,20 +93,6 @@ def get_property_amenity_repo(db: Session = Depends(get_db)):
 def get_room_amenity_repo(db: Session = Depends(get_db)):
     return RoomAmenityRepository(db)
 
-## ROOM
-
-def get_room_repo(db: Session = Depends(get_db)):
-    return RoomRepository(db)
-
-def get_room_amenity_factory() -> RoomAmenityFactory:
-    return RoomAmenityFactory()
-
-def get_room_service(
-    room_repo: RoomRepository = Depends(get_room_repo),
-    room_amenity_factory: RoomAmenityFactory = Depends(get_room_amenity_factory),
-    amenity_repo: RoomAmenityRepository = Depends(get_room_amenity_repo)
-) -> RoomService:
-    return RoomService(room_repo, room_amenity_factory, amenity_repo)
 
 ## MEDIA
 
@@ -133,3 +119,20 @@ def get_property_service(
     media_repo: MediaRepository = Depends(get_media_repo)
 ) -> PropertyService:
     return PropertyService(property_repo, property_amenity_factory, amenity_repo, media_repo)
+
+## ROOM
+
+def get_room_repo(db: Session = Depends(get_db)):
+    return RoomRepository(db)
+
+def get_room_amenity_factory() -> RoomAmenityFactory:
+    return RoomAmenityFactory()
+
+def get_room_service(
+    room_repo: RoomRepository = Depends(get_room_repo),
+    room_amenity_factory: RoomAmenityFactory = Depends(get_room_amenity_factory),
+    amenity_repo: RoomAmenityRepository = Depends(get_room_amenity_repo),
+    property_repo: PropertyRepository = Depends(get_property_repo),
+    media_repo: MediaRepository = Depends(get_media_repo)
+) -> RoomService:
+    return RoomService(room_repo, room_amenity_factory, amenity_repo, property_repo, media_repo)

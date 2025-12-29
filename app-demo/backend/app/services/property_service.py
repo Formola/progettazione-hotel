@@ -1,6 +1,6 @@
 # app/services/property_service.py
 import uuid
-from typing import List
+from typing import List, Optional
 from fastapi import HTTPException
 
 from app.domain import entities
@@ -22,6 +22,21 @@ class PropertyService:
         self.property_amenity_factory = property_amenity_factory
         self.amenity_repo = amenity_repo
         self.media_repo = media_repo
+        
+    # mettiamo sia owner che owner_id per aiutarci nel test da /docs con fastapi.
+    def get_user_properties(self, owner: Optional[entities.User], owner_id: Optional[str] = None) -> List[entities.Property]:
+        if owner:
+            return self.property_repo.get_by_owner_id(owner.id)
+        elif owner_id:
+            return self.property_repo.get_by_owner_id(owner_id)
+        else:
+            return []
+        
+    def get_property_by_id(self, property_id: str) -> entities.Property:
+        p = self.property_repo.get_by_id(property_id)
+        if not p:
+            raise HTTPException(status_code=404, detail="Property not found")
+        return p
 
     def create_property(self, data: PropertyInput, owner: entities.User) -> entities.Property:
         final_amenities = []
@@ -93,11 +108,61 @@ class PropertyService:
         # Save
         return self.property_repo.save(prop)
 
-    def get_user_properties(self, owner: entities.User) -> List[entities.Property]:
-        return self.property_repo.get_by_owner_id(owner.id)
-        
-    def get_property(self, property_id: str) -> entities.Property:
-        p = self.property_repo.get_by_id(property_id)
-        if not p:
+    def delete_property(self, property_id: str, owner: entities.User) -> None:
+        prop = self.property_repo.get_by_id(property_id)
+        if not prop:
             raise HTTPException(status_code=404, detail="Property not found")
-        return p
+
+        # Security Check
+        if not prop.is_owned_by(owner.id):
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        self.property_repo.delete(prop)
+        
+    def update_property(self, property_id: str, data: PropertyInput, owner: entities.User) -> entities.Property:
+        prop = self.property_repo.get_by_id(property_id)
+        if not prop:
+            raise HTTPException(status_code=404, detail="Property not found")
+
+        # Security Check
+        if not prop.is_owned_by(owner.id):
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        # Aggiorniamo i campi semplici
+        prop.name = data.name
+        prop.address = data.address
+        prop.city = data.city
+        prop.country = data.country
+        prop.description = data.description
+
+        # AMENITIES ESISTENTI (Solo ID)
+        final_amenities = []
+        for aid in data.amenity_ids:
+            stub = self.property_amenity_factory.create_amenity(id=aid)
+            final_amenities.append(stub)
+
+        # NUOVE AMENITIES (Name + Category)
+        for new_data in data.new_amenities:
+            new_entity = self.property_amenity_factory.create_amenity(
+                id=str(uuid.uuid4()),
+                name=new_data.name,
+                category=new_data.category
+            )
+            new_entity.description = new_data.description
+
+            self.amenity_repo.save(new_entity)
+            final_amenities.append(new_entity)
+
+        prop.amenities = final_amenities
+
+        # Media
+        property_media = []
+        for mid in data.media_ids:
+            m = self.media_repo.get_by_id(mid)
+            if m: property_media.append(m)
+        
+        prop.media = property_media
+
+        return self.property_repo.save(prop)
+    
+    

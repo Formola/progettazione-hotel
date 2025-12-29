@@ -2,35 +2,10 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 from enum import Enum
 from datetime import date
+from app.domain.entities import PropertyStatus, RoomType, MediaType
 
-# ==========================================
-# ENUMS
-# ==========================================
-class PropertyStatus(str, Enum):
-    DRAFT = 'DRAFT'
-    PUBLISHED = 'PUBLISHED'
-    INACTIVE = 'INACTIVE'
 
-class RoomType(str, Enum):
-    SINGLE = 'Singola' 
-    DOUBLE = 'Doppia'
-    SUITE = 'Suite'
-
-class MediaType(str, Enum):
-    IMAGE = 'IMAGE'
-    VIDEO = 'VIDEO'
-
-class UserRole(str, Enum):
-    GUEST = 'GUEST'
-    OWNER = 'OWNER'
-    ADMIN = 'ADMIN'
     
-    
-class UserContext(BaseModel):
-    id: str
-    email: Optional[str] = None 
-    role: Optional[str] = None
-
 # ==========================================
 # MEDIA
 # ==========================================

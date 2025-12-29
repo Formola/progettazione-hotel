@@ -3,19 +3,78 @@ from sqlalchemy.orm import Session
 from app.domain import entities
 from app.models import models
 from app.repositories import mappers
+from sqlalchemy.orm import selectinload
 
 class PropertyRepository:
     def __init__(self, db: Session):
         self.db = db
 
     def get_by_id(self, property_id: str) -> Optional[entities.Property]:
-        model = self.db.query(models.PropertyModel).get(property_id)
+        
+        # Costruiamo la query con le opzioni di caricamento
+        stmt = (
+            self.db.query(models.PropertyModel)
+            .options(
+                selectinload(models.PropertyModel.amenities),
+                selectinload(models.PropertyModel.media),
+                selectinload(models.PropertyModel.rooms).selectinload(models.RoomModel.amenities),
+                selectinload(models.PropertyModel.rooms).selectinload(models.RoomModel.media)
+            )
+            .filter(models.PropertyModel.id == property_id)
+        )
+        
+        # Usiamo .first() invece di .get()
+        model = stmt.first()
+        
         return mappers.to_domain_property(model) if model else None
     
     def get_by_owner_id(self, owner_id: str) -> List[entities.Property]:
-        models_list = self.db.query(models.PropertyModel).filter(
-            models.PropertyModel.owner_id == owner_id
-        ).all()
+        
+        """
+        OTTIMIZZAZIONE PERFORMANCE (Eager Loading vs Lazy Loading):
+        
+        Usiamo `options(selectinload(...))` per risolvere il problema "N+1 Query".
+        
+        Senza questa opzione, SQLAlchemy usa il "Lazy Loading":
+        1. Fa 1 query per recuperare le proprietà.
+        2. Poi, quando il mapper accede a `prop.rooms` o `prop.amenities`, 
+        esegue una NUOVA query separata per ogni singola proprietà.
+        -> Su 50 proprietà, farebbe 1 + 50 + 50 = 101 query (Lentissimo).
+        
+        Con `selectinload`:
+        SQLAlchemy esegue query separate ma raggruppate (Batching) usando `WHERE id IN (...)`.
+        -> Recupera tutte le proprietà, poi tutte le stanze relative, poi tutte le amenities.
+        -> Risultato: 3-4 query totali indipendentemente dal numero di dati (Molto Veloce).
+        
+        Inoltre, questo previene errori di "Detached Instance", garantendo che tutti i dati 
+        necessari (figli e nipoti) siano caricati in memoria prima che la sessione DB venga chiusa.
+        """
+        
+        # Costruiamo la query con le opzioni di caricamento
+        stmt = (
+            self.db.query(models.PropertyModel)
+            .filter(models.PropertyModel.owner_id == owner_id)
+            .options(
+                # Carica le amenities della Proprietà
+                selectinload(models.PropertyModel.amenities),
+                
+                # Carica i media della Proprietà
+                selectinload(models.PropertyModel.media),
+
+                # Carica le Stanze...
+                selectinload(models.PropertyModel.rooms)
+                # ... e per ogni stanza, carica le sue Amenities (Nested Loading)
+                .selectinload(models.RoomModel.amenities),
+                
+                # Carica di nuovo le Stanze (SQLAlchemy unisce le richieste) per i Media
+                selectinload(models.PropertyModel.rooms)
+                .selectinload(models.RoomModel.media)
+            )
+        )
+        
+        models_list = stmt.all()
+        
+        # Il mapper sarà velocissimo perché i dati sono già in memoria RAM
         return [mappers.to_domain_property(m) for m in models_list]
     
     def delete(self, property_id: str):
@@ -60,6 +119,7 @@ class PropertyRepository:
             # Sync Media (One-to-Many)
             self._sync_media_update(existing_model, entity.media)
 
+        # l'existing model viene aggiornato in place
         self.db.commit()
         return self.get_by_id(entity.id)
 

@@ -5,14 +5,23 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 class PropertyStatus(str, Enum):
-    DRAFT = "DRAFT"
-    PUBLISHED = "PUBLISHED"
-    INACTIVE = "INACTIVE"
+    DRAFT = 'DRAFT'
+    PUBLISHED = 'PUBLISHED'
+    INACTIVE = 'INACTIVE'
 
 class RoomType(str, Enum):
-    SINGLE = "SINGLE"
-    DOUBLE = "DOUBLE"
-    SUITE = "SUITE"
+    SINGLE = 'SINGLE' 
+    DOUBLE = 'DOUBLE'
+    SUITE = 'SUITE'
+
+class MediaType(str, Enum):
+    IMAGE = 'IMAGE'
+    VIDEO = 'VIDEO'
+
+class UserRole(str, Enum):
+    GUEST = 'GUEST'
+    OWNER = 'OWNER'
+    ADMIN = 'ADMIN'
 
 ## USER
 
@@ -22,6 +31,8 @@ class User:
     name: str
     email: str
     cognito_uuid: str
+    
+
 
 ## AMENITIES
 
@@ -48,6 +59,16 @@ class PropertyAmenity(IAmenity):
     name: str
     category: str
     description: Optional[str] = None
+    
+    # --- IMPLEMENTAZIONE METODI ASTRATTI ---
+    def getName(self) -> str:
+        return self.name
+
+    def getCategory(self) -> str:
+        return self.category
+    
+    def getDescription(self) -> str:
+        return self.description or ""
 
 @dataclass
 class RoomAmenity(IAmenity):
@@ -55,6 +76,16 @@ class RoomAmenity(IAmenity):
     name: str
     category: str
     description: Optional[str] = None
+    
+    # --- IMPLEMENTAZIONE METODI ASTRATTI ---
+    def getName(self) -> str:
+        return self.name
+
+    def getCategory(self) -> str:
+        return self.category
+    
+    def getDescription(self) -> str:
+        return self.description or ""
     
 ## MEDIA
 

@@ -74,6 +74,9 @@ class PropertyModel(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relazioni
+    # cascade="all, delete-orphan" per eliminare tutto se la property viene cancellata
+    # importante, se si elimina una property, si eliminano anche stanze e media associati
+    # oppure se se si rimuove una stanza dalla property, si elimina la stanza stessa e non si lascia orfana, stesso per i media.
     owner = relationship("UserModel", back_populates="properties")
     rooms = relationship("RoomModel", back_populates="property", cascade="all, delete-orphan")
     media = relationship("MediaModel", back_populates="property", cascade="all, delete-orphan")

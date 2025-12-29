@@ -1,5 +1,36 @@
 from app.domain import entities
 from app.models import models
+from app.domain.entities import RoomType
+
+# Room Type Parsing with Aliases
+
+ROOM_TYPE_SYNONYMS = {
+    RoomType.SINGLE: ["single", "singola", "1", "uno", "sola"],
+    RoomType.DOUBLE: ["double", "doppia", "2", "due", "coppia"],
+    RoomType.SUITE:  ["suite", "junior suite", "senior suite", "presidential suite"]
+}
+
+def build_room_type_aliases():
+    aliases = {}
+    for room_type, values in ROOM_TYPE_SYNONYMS.items():
+        for v in values:
+            aliases[v.lower()] = room_type
+    return aliases
+
+
+ROOM_TYPE_ALIASES = build_room_type_aliases()
+
+def parse_room_type(value: str) -> RoomType:
+    if not value:
+        raise ValueError("Room type is required")
+
+    key = value.strip().lower()
+
+    try:
+        return ROOM_TYPE_ALIASES[key]
+    except KeyError:
+        raise ValueError(f"Invalid room type: {value}")
+
 
 # ==========================================
 # AMENITIES MAPPERS
@@ -56,7 +87,7 @@ def to_domain_room(model: models.RoomModel) -> entities.Room:
     return entities.Room(
         id=model.id,
         property_id=model.property_id,
-        type=entities.RoomType(model.type),
+        type=parse_room_type(model.type),
         price=model.price,
         capacity=model.capacity,
         description=model.description,
