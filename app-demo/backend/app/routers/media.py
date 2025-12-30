@@ -6,6 +6,16 @@ from app.domain.entities import User
 
 router = APIRouter(prefix="/api/media", tags=["media"])
 
+@router.get("/all", response_model=list[MediaData])
+def list_all_media(
+    service: MediaService = Depends(deps.get_media_service)
+):
+    """
+    List all media in the system.
+    Does not require authentication.
+    """
+    return service.list_all_media()
+
 @router.post("/", response_model=MediaData, status_code=status.HTTP_201_CREATED)
 def upload_media(
     payload: MediaInput,
@@ -83,3 +93,4 @@ def list_media_by_room(
     Does not require authentication.
     """
     return service.list_media_by_room(room_id)
+

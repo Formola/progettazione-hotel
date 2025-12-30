@@ -141,7 +141,7 @@ class RoomService:
         return self.room_repo.save(room)
     
     # intendiamo creazione di una nuova amenity e collegamento alla stanza
-    def add_new_amenity(self, room_id: str, data: NewAmenityInput, owner: entities.User):
+    def add_new_amenity(self, room_id: str, data: NewAmenityInput):
         room = self.room_repo.get_by_id(room_id)
 
         # CERCA SE ESISTE GIÀ (Case insensitive per sicurezza)
