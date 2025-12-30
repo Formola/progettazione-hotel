@@ -1028,3 +1028,11 @@ prova ansible ec2, carico app in ec2 con ansible. magari lo menzionaimo come svi
 kubernetes al massimo menzioniamo solo ma non lo usiamo.
 design uml non per forza da scrivere preciso nelle due app.
 
+
+
+![class Diagram](./plantuml/design/class_design.puml)
+
+
+![img](./img/class_diagram_final.png)
+
+

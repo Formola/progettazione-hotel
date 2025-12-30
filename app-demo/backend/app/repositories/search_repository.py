@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List, Dict, Any, Optional
 
+# Questa repository si occupa delle query.
 class SearchRepository:
     def __init__(self, db: Session):
         self.db = db

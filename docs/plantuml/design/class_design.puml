@@ -1,387 +1,366 @@
-@startuml class_design
+@startuml class_design_final
 left to right direction
 skinparam classAttributeIconSize 0
+skinparam linetype polyline
+skinparam shadowing false
 
-' ============================
-' DOMAIN LAYER - USERS
-' ============================
-
-abstract class User {
-    +id: int
-    +name: String
-    +email: String
-    +login(): boolean
+' --- API ---
+class AuthApi {
+    -service: AuthService
+    +login(email: String, password: String): UserData
+    +signup(user: UserData, password: String): UserData
     +logout(): void
-    +signup(): boolean
-    +searchProperties(criteria: SearchCriteria): List<Property>
-    +filterProperties(filters: FilterCriteria): List<Property>
-    +viewPropertyDetails(propertyId: int): Property
+    +getAccessToken(): String
+    +getCurrentUser(): UserData
+    +refreshSession(): String
+    +isAuthenticated(): boolean
 }
 
-class PropertyOwner {
-    +paymentInfo: PaymentInfo
-    +viewOwnedProperties(): List<Property>
-    +createProperty(data: PropertyData): Property
-    +addPropertyAmenity(propertyId: int, amenity: PropertyAmenity): void
-    +removePropertyAmenity(propertyId: int, amenity: PropertyAmenity): void
+class PropertyApi {
+    +createProperty(data: PropertyInput): PropertyData
+    +getMyProperties(): PropertyData[]
+    +getPropertyById(property_id: String): PropertyData
+    +publishProperty(property_id: String): PropertyData
+    +updateProperty(property_id: String, data: PropertyInput): PropertyData
+    +deleteProperty(property_id: String): void
 }
 
-class Customer {
-    +preferences
-    +searchProperties()
-    +filterProperties()
-    +viewPropertyDetails()
+class RoomApi {
+    +addRoom(property_id: String, data: RoomInput): RoomData
+    +updateRoom(room_id: String, data: RoomInput): RoomData
+    +deleteRoom(room_id: String): void
 }
 
-User <|-- PropertyOwner
-User <|-- Customer
-PropertyOwner "1" --> "*" Property : owns
-User --> Property : views
-
-' ============================
-' DOMAIN LAYER - CORE ENTITIES
-' ============================
-
-enum PropertyStatus {
-    DRAFT
-    PUBLISHED
-    INACTIVE
+class MediaApi {
+    +uploadMedia(data: MediaInput): MediaData
+    +deleteMedia(media_id: String): void
+    +listByProperty(property_id: String): MediaData[]
 }
 
-class Property {
-    +id: int
-    +name: String
-    +address: String
-    +description: String
-    +status: PropertyStatus
-    +propertyAmenities: List<PropertyAmenity>
-    +rooms: List<Room>
-    +media: List<Media>
-    +canBePublished(): boolean
-    +publish(): void
-    +addRoom(room: Room): void
-    +removeRoom(room: Room): void
-    +addMedia(media: Media): void
-    +removeMedia(media: Media): void
-    +addAmenity(amenity: PropertyAmenity): void
-    +removeAmenity(amenity: PropertyAmenity): void
+class SearchApi {
+    +searchProperties(criteria: SearchCriteria): PropertyData[]
+    +getPropertyById(property_id: String): PropertyData
 }
 
-class Room {
-    +id: int
-    +type: String
-    +price: float
-    +capacity: int
-    +roomAmenities: List<RoomAmenity>
-    +availability: Availability
-    +addMedia(media: Media): void
-    +removeMedia(media: Media): void
-    +addAmenity(amenity: RoomAmenity): void
-    +removeAmenity(amenity: RoomAmenity): void
+' --- SERVICES ---
+class AuthService {
+    -provider: IAuthProvider
+    +login(email: String, password: String): UserData
+    +signup(user: UserData, password: String): UserData
+    +logout(): void
+    +getAccessToken(): String
+    +getUser(): UserData
+    +refreshTokenOrLogout(): String
+    -saveSession(response: AuthResponse): void
 }
-
-class Media {
-    +id: int
-    +fileName: String
-    +fileType: MediaType
-    +storagePath: String
-    +description: String
-}
-
-Property --> PropertyStatus
-Property "1" *-- "*" Room
-Property "1" *-- "*" Media
-Room "1" *-- "*" Media
-
-' ============================
-' BUILDER PATTERN
-' ============================
-
-class PropertyBuilder {
-    -property: Property
-    +PropertyBuilder(name: String, address: String)
-    +withDescription(description: String): PropertyBuilder
-    +withStatus(status: PropertyStatus): PropertyBuilder
-    +addAmenity(amenity: PropertyAmenity): PropertyBuilder
-    +addRoom(room: Room): PropertyBuilder
-    +addMedia(media: Media): PropertyBuilder
-    +build(): Property
-}
-
-
-PropertyBuilder --> Property
-
-' ============================
-' STRATEGY PATTERN - VALIDATION
-' ============================
-
-class ValidatorContext {
-    -strategy: IValidationStrategy
-    +setStrategy(strategy: IValidationStrategy): void
-    +executeValidation(entity: Object): boolean
-}
-
-interface IValidationStrategy {
-    +validate(entity: Object): boolean
-}
-
-class PropertyValidationStrategy {
-    +validate(entity: Object): boolean
-}
-class RoomValidationStrategy {
-    +validate(entity: Object): boolean
-}
-
-ValidatorContext o--> IValidationStrategy
-IValidationStrategy <|.. PropertyValidationStrategy
-IValidationStrategy <|.. RoomValidationStrategy
-
-' ============================
-' FACTORY METHOD - AMENITIES
-' ============================
-
-interface IAmenity {
-    +getName(): String
-    +getDescription(): String
-}
-
-class PropertyAmenity {
-    +name: String
-}
-class RoomAmenity {
-    +name: String
-    +description: String
-    +isIncluded(): boolean
-}
-
-abstract class AmenityFactory {
-    +createAmenity(name: String, desc: String): IAmenity
-}
-class PropertyAmenityFactory {
-    +createAmenity(name: String, desc: String): IAmenity
-}
-class RoomAmenityFactory {
-    +createAmenity(name: String, desc: String): IAmenity
-}
-
-IAmenity <|.. PropertyAmenity
-IAmenity <|.. RoomAmenity
-AmenityFactory <|-- PropertyAmenityFactory
-AmenityFactory <|-- RoomAmenityFactory
-AmenityFactory ..> IAmenity
-
-' ============================
-' API LAYER (con tutti i metodi invariati)
-' ============================
-
-class PropertyAPI {
-    +createProperty(data: PropertyData): Response
-    +updateProperty(id: int, data: PropertyData): Response
-    +deleteProperty(id: int): Response
-    +getProperty(id: int): Response
-    +publishProperty(id: int): Response
-    +getOwnerProperties(ownerId: int): Response
-}
-
-class RoomAPI {
-    +addRoom(propertyId: int, data: RoomData): Response
-    +updateRoom(id: int, data: RoomData): Response
-    +deleteRoom(id: int): Response
-    +getRoom(id: int): Response
-}
-
-class MediaAPI {
-    +uploadMedia(data: MediaData): Response
-    +deleteMedia(id: int): Response
-}
-
-class SearchAPI {
-    +searchProperties(criteria: SearchCriteria): Response
-    +filterProperties(filters: FilterCriteria): Response
-    +getPropertyById(id: int): Response
-}
-
-class AuthAPI {
-    +signup(userData: UserData, password: String): Response
-    +login(email: String, password: String): Response
-    +logout(userId: int): Response
-    +getUserById(userId: int): Response
-}
-
-' ============================
-' SERVICES LAYER (con MediaManager)
-' ============================
 
 class PropertyService {
-    -propertyRepo: IPropertyRepository
-    -roomRepo: IRoomRepository
-    -mediaManager: MediaManager
-    -validatorContext: ValidatorContext
-    -builder: PropertyBuilder
+    -propertyRepo: PropertyRepository
+    -amenityRepo: PropertyAmenityRepository
+    -mediaRepo: MediaRepository
     -amenityFactory: PropertyAmenityFactory
-    +createProperty(data: PropertyData): Property
-    +updateProperty(id: int, data: PropertyData): Property
-    +deleteProperty(id: int): void
-    +publishProperty(id: int): void
-    +getProperty(id: int): Property
-    +getOwnerProperties(ownerId: int): List<Property>
-    +addPropertyAmenity(propertyId: int, amenity: PropertyAmenity): void
-    +removePropertyAmenity(propertyId: int, amenity: PropertyAmenity): void
+    +get_user_properties(owner: User, owner_id: String): List<Property>
+    +get_property_by_id(property_id: String): Property
+    +create_property(data: PropertyInput, owner: User): Property
+    +publish_property(property_id: String, owner: User): Property
+    +delete_property(property_id: String, owner: User): void
+    +update_property(property_id: String, data: PropertyInput): Property
 }
 
 class RoomService {
-    -roomRepo: IRoomRepository
-    -propertyRepo: IPropertyRepository
-    -mediaManager: MediaManager
-    -validatorContext: ValidatorContext
+    -roomRepo: RoomRepository
+    -propertyRepo: PropertyRepository
+    -amenityRepo: RoomAmenityRepository
+    -mediaRepo: MediaRepository
     -amenityFactory: RoomAmenityFactory
-    +addRoomToProperty(propertyId: int, room: Room): Room
-    +updateRoom(id: int, room: Room): Room
-    +deleteRoom(id: int): void
-    +getRoom(id: int): Room
-    +addRoomAmenity(roomId: int, amenity: RoomAmenity): void
-    +removeRoomAmenity(roomId: int, amenity: RoomAmenity): void
+    +add_room(property_id: String, data: RoomInput): Room
+    +get_room(room_id: String): Room
+    +get_rooms_by_property_id(property_id: String): List<Room>
+    +delete_room(room_id: String, owner: User): void
+    +update_room(room_id: String, data: RoomInput, owner: User): Room
+    +add_new_amenity(room_id: String, data: NewAmenityInput): Room
+    +remove_room_amenity(room_id: String, amenity_id: String, owner: User): Room
 }
 
-class MediaManager {
-    -propertyRepo: IPropertyRepository
-    -roomRepo: IRoomRepository
-    -mediaRepo: IMediaRepository
+class MediaService {
+    -mediaRepo: MediaRepository
     -storage: IMediaStorage
-    +uploadMedia(data: MediaData): Media
-    +deleteMedia(mediaId: int): void
-    +findById(mediaId: int): Media
+    +upload_media(data: MediaInput): Media
+    +delete_media(media_id: String): void
+    +list_media_by_property(property_id: String): List<Media>
+    +get_media_by_id(media_id: String): Media
+    +list_media_by_room(room_id: String): List<Media>
+    +list_all_media(): List<Media>
 }
 
 class SearchService {
-    -propertyRepo: IPropertyRepository
-    +searchProperties(criteria: SearchCriteria): List<Property>
-    +filterProperties(filters: FilterCriteria): List<Property>
-    +getPropertyById(id: int): Property
+    -searchRepo: SearchRepository
+    +search(location: String): List<Dict>
 }
 
-class AuthService {
-    -authProvider: IAuthProvider
-    +signup(userData: UserData, password: String): User
-    +login(email: String, password: String): User
-    +logout(userId: int): void
-    +getUserById(userId: int): User
+' --- REPOSITORIES ---
+class UserRepository {
+    -db: Session
+    +get_by_cognito_id(cognito_uuid: String): User
+    +create_from_cognito(cognito_uuid: String, email: String, name: String): User
 }
 
-interface IAuthProvider
-class AWSCognitoAuthProvider
-
-' ============================
-' REPOSITORIES & STORAGE
-' ============================
-
-interface IPropertyRepository {
-    +save(property: Property): Property
-    +findById(id: int): Property
-    +findByOwnerId(ownerId: int): List<Property>
-    +delete(id: int): void
+class PropertyRepository {
+    -db: Session <<SQLAlchemy>>
+    +save(entity: Property): Property
+    +get_by_id(property_id: String): Property
+    +get_by_owner_id(owner_id: String): List<Property>
+    +delete(property_id: String): void
+    - _sync_amenities(model: PropertyModel <<ORM>>, property_amenity_entities: List<PropertyAmenity>): void
+    - _sync_room_amenities(room_model: RoomModel <<ORM>>, room_amenity_entities: List<RoomAmenity>): void
+    - _sync_rooms_insert(model: PropertyModel <<ORM>>, room_entities: List<Room>): void
+    - _sync_rooms_update(model: PropertyModel <<ORM>>, room_entities: List<Room>): void
+    - _sync_media_insert(model: PropertyModel <<ORM>>, media_entities: List<Media>): void
+    - _sync_media_update(model: PropertyModel <<ORM>>, media_entities: List<Media>): void
 }
 
-interface IRoomRepository {
-    +save(room: Room): Room
-    +findById(id: int): Room
-    +delete(id: int): void
+class RoomRepository {
+    -db: Session <<SQLAlchemy>>
+    +save(entity: Room): Room
+    +get_by_id(room_id: String): Room
+    +get_by_property_id(property_id: String): List<Room>
+    +delete(room_id: String): void
+    - _sync_amenities(room_model: RoomModel <<ORM>>, room_amenity_entities: List<RoomAmenity>): void
+    - _sync_media(room_model: RoomModel <<ORM>>, media_entities: List<Media>): void
 }
 
-interface IMediaRepository {
-    +save(media: Media): Media
-    +findById(id: int): Media
-    +delete(id: int): void
+class MediaRepository {
+    -db: Session
+    +save(entity: Media, property_id: String, room_id: String): void
+    +get_by_id(media_id: String): Media
+    +list_by_property(property_id: String): List<Media>
+    +list_by_room(room_id: String): List<Media>
+    +delete(media_id: String): void
+    +list_all(): List<Media>
+}
+
+class SearchRepository {
+    -db: Session
+    +search_properties(location: String): List<Dict>
+}
+
+abstract class AmenityRepository {
+    +save(entity: IAmenity): IAmenity
+    +delete(amenity_id: String): void
+    +get_by_id(amenity_id: String): IAmenity
+}
+
+class PropertyAmenityRepository {
+    -db: Session <<SQLAlchemy>>
+    +save(entity: PropertyAmenity): PropertyAmenity
+    +delete(amenity_id: String): void
+    +get_by_id(amenity_id: String): PropertyAmenity
+    +get_by_name(name: String): PropertyAmenity
+}
+
+
+class RoomAmenityRepository {
+    -db: Session <<SQLAlchemy>>
+    +save(entity: RoomAmenity): RoomAmenity
+    +delete(amenity_id: String): void
+    +get_by_id(amenity_id: String): RoomAmenity
+    +get_by_name(name: String): RoomAmenity
+}
+
+
+
+' --- ENTITIES & DTOS ---
+class User {
+    +id: String
+    +cognito_uuid: String
+    +email: String
+    +name: String
+}
+
+interface UserData {
+    +id: String
+    +email: String
+    +role: String
+}
+
+interface AuthResponse {
+    +access_token: String
+    +refresh_token: String
+    +id_token: String
+    +user: UserData
+}
+
+class Property {
+    +id: String
+    +name: String
+    +description: String
+    +address: String
+    +city: String
+    +country: String
+    +owner: User
+    +status: PropertyStatus
+    +amenities: List<PropertyAmenity>
+    +rooms: List<Room>
+    +media: List<Media>
+    +publish(): void
+    +can_be_published(): boolean
+    +unpublish(): void
+    +add_room(room: Room): void
+    +remove_room(room_id: String): void
+    +is_owned_by(user_id: String): boolean
+    +add_amenity(property_amenity: PropertyAmenity, custom_description: String): void
+}
+
+class Room {
+    +id: String
+    +type: RoomType
+    +price: float
+    +capacity: int
+    +property_id: String
+    +description: String
+    +is_available: boolean
+    +amenities: List<RoomAmenity>
+    +media: List<Media>
+    +add_amenity(amenity: RoomAmenity, custom_description: String): void
+    +remove_amenity(room_amenity_id: String): void
+    +update_price(new_price: float): void
+}
+
+class Media {
+    +id: String
+    +file_name: String
+    +storage_path: String
+    +description: String
+    +file_type: MediaType
+}
+
+interface IAmenity {
+    +getName(): String
+    +getCategory(): String
+    +getDescription(): String
+    +getCustomDescription(): String
+}
+
+class PropertyAmenity {
+    +id: String
+    +name: String
+    +category: String
+    +description: String
+    +custom_description: String
+    +getName(): String
+    +getCategory(): String
+    +getDescription(): String
+    +getCustomDescription(): String
+}
+
+class RoomAmenity {
+    +id: String
+    +name: String
+    +category: String
+    +description: String
+    +custom_description: String
+    +getName(): String
+    +getCategory(): String
+    +getDescription(): String
+    +getCustomDescription(): String
+}
+
+' --- INFRASTRUCTURE ---
+interface IAuthProvider {
+    +login(email: String, password: String): AuthResponse
+    +signup(user: UserData, password: String): AuthResponse
+    +refreshSession(refreshToken: String): AuthResponse
+    +logout(): void
+}
+
+class AWSCognitoAuthProvider {
+    -client: CognitoIdentityProviderClient({region: String, endpoint: String})
+    -clientId: String
+    -userPoolId: String
+    +login(email: String, password: String): AuthResponse
+    +signup(user: UserData, password: String): AuthResponse
+    +refreshSession(refreshToken: String): AuthResponse
+    +logout(): void
+    -mapResponse(response: any): AuthResponse
 }
 
 interface IMediaStorage {
-    +storeMedia(fileData: FileData): String
-    +deleteMedia(storagePath: String): void
+    +store_media(file_name: String, file_data: bytes, type: String): String
+    +delete_media(storage_path: String): void
 }
 
-class PropertyRepositoryImpl
-class RoomRepositoryImpl
-class MediaRepositoryImpl
-class S3MediaStorage
+class S3MediaStorage {
+    -s3_client: boto3.client('s3', region_name=String, endpoint_url=String)
+    -bucket_name: String
+    -settings: Settings
+    +store_media(file_name: String, file_data: bytes, type: String): String
+    +delete_media(storage_path: String): void
+}
 
-' ============================
-' RELATIONSHIPS
-' ============================
+abstract class AmenityFactory {
+    +create_amenity(id: String, name: String, category: String, description: String, custom_description: String): IAmenity
+}
 
-PropertyAPI --> PropertyService : <<REST call>>
-RoomAPI --> RoomService : <<REST call>>
-MediaAPI --> MediaManager : <<REST call>>
-SearchAPI --> SearchService : <<REST call>>
-AuthAPI --> AuthService : <<REST call>>
+class PropertyAmenityFactory {
+    +create_amenity(id: String, name: String, category: String, description: String, custom_description: String): PropertyAmenity
+}
 
-PropertyService --> IPropertyRepository
-PropertyService --> IRoomRepository
-PropertyService --> MediaManager
-PropertyService --> ValidatorContext
-PropertyService --> PropertyAmenityFactory
-PropertyService --> PropertyBuilder
+class RoomAmenityFactory {
+    +create_amenity(id: String, name: String, category: String, description: String, custom_description: String): RoomAmenity
+}
 
-RoomService --> Room
-RoomService --> IRoomRepository
-RoomService --> IPropertyRepository
-RoomService --> MediaManager
-RoomService --> ValidatorContext
-RoomService --> RoomAmenityFactory
 
-MediaManager --> Media
-MediaManager --> IMediaRepository
-MediaManager --> IMediaStorage
-
-SearchService --> IPropertyRepository
+AuthApi --> AuthService
 AuthService --> IAuthProvider
-
-IPropertyRepository <|.. PropertyRepositoryImpl
-IRoomRepository <|.. RoomRepositoryImpl
-IMediaRepository <|.. MediaRepositoryImpl
-IMediaStorage <|.. S3MediaStorage
 IAuthProvider <|.. AWSCognitoAuthProvider
+AWSCognitoAuthProvider --> AuthResponse
+AuthService --> UserData : uses
+AuthService --> UserRepository
+UserRepository --> User
 
-' ============================
-' DTO LAYER (implicit, between API and Service)
-' ============================
+' 2. PROPERTY FLOW 
+PropertyApi ..> PropertyService
+PropertyService --> PropertyRepository
+PropertyRepository --> Property
+PropertyService --> PropertyAmenityRepository
+PropertyService --> PropertyAmenityFactory
+PropertyService --> UserRepository
 
-class PropertyData {
-    +name: String
-    +address: String
-    +description: String
-    +status: String
-    +rooms: List<RoomData>
-}
+' 3. ROOM FLOW
+RoomApi ..> RoomService
+RoomService --> RoomRepository
+RoomRepository --> Room
+RoomService --> RoomAmenityRepository
+RoomService --> RoomAmenityFactory
+RoomService --> PropertyRepository
+RoomService --> UserRepository
 
-class RoomData {
-    +type: String
-    +price: float
-    +capacity: int
-}
+' 4. MEDIA FLOW
+MediaApi ..> MediaService
+MediaService --> MediaRepository
+MediaRepository --> Media
+MediaService --> IMediaStorage
+MediaService --> UserRepository
+IMediaStorage <|.. S3MediaStorage
 
-class MediaData {
-    +fileName: String
-    +fileType: String
-    +base64Data: String
-}
+' 5. SEARCH FLOW
+SearchApi ..> SearchService
+SearchService --> SearchRepository
 
-class UserData {
-    +name: String
-    +email: String
-    +password: String
-}
+' 6. ENTITY COMPOSITION & RELATIONS (Right Side)
+Property "1" *-- "*" Room
+Property "1" o-- "*" Media
+Room "1" o-- "*" Media
+Property --> User : owner
+Property *-- PropertyAmenity
+Room *-- RoomAmenity
 
-class Response {
-    +status: int
-    +message: String
-    +data: Object
-}
-
-
-PropertyAPI ..> PropertyData : uses
-RoomAPI ..> RoomData : uses
-MediaAPI ..> MediaData : uses
-AuthAPI ..> UserData : uses
-AuthAPI ..> Response : returns
+' 7. INHERITANCE (Bottom/Detail)
+AmenityRepository <|-- PropertyAmenityRepository
+AmenityRepository <|-- RoomAmenityRepository
+AmenityFactory <|-- PropertyAmenityFactory
+AmenityFactory <|-- RoomAmenityFactory
+IAmenity <|.. PropertyAmenity
+IAmenity <|.. RoomAmenity
 
 @enduml

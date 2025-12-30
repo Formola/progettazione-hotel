@@ -1,8 +1,28 @@
+from abc import ABC
 from typing import List, Optional
 from sqlalchemy.orm import Session, selectinload, joinedload
 from app.domain import entities
 from app.models import models
 from app.repositories import mappers
+
+## INTERFACCIA REPOSITORY SERVE SOLO SE IN FUTURO VOGLIAMO
+## USARE DIVERSI DATABASE.
+
+# class PropertyRepositoryInterface(ABC):
+    
+#     db: Session
+    
+#     def save(self, entity: entities.Property) -> entities.Property:
+#         pass
+
+#     def get_by_id(self, property_id: str) -> Optional[entities.Property]:
+#         pass
+
+#     def get_by_owner_id(self, owner_id: str) -> List[entities.Property]:
+#         pass
+
+#     def delete(self, property_id: str):
+#         pass
 
 class PropertyRepository:
     def __init__(self, db: Session):
@@ -97,7 +117,7 @@ class PropertyRepository:
     # HELPER PRIVATI DI SINCRONIZZAZIONE (AGGIORNATI)
     # =================================================================
 
-    def _sync_amenities(self, model: models.PropertyModel, amenity_entities: List[entities.PropertyAmenity]):
+    def _sync_amenities(self, model: models.PropertyModel, property_amenity_entities: List[entities.PropertyAmenity]):
         """
         AGGIORNATO: Gestisce la relazione Many-to-Many tramite PropertyAmenityLinkModel.
         Salva anche custom_description.
@@ -105,11 +125,11 @@ class PropertyRepository:
         # Puliamo i link esistenti (cascade farà il delete sul DB)
         model.amenity_links = []
 
-        if not amenity_entities:
+        if not property_amenity_entities:
             return
 
         new_links = []
-        for a_entity in amenity_entities:
+        for a_entity in property_amenity_entities:
             # Creiamo il LINK esplicitamente
             link = models.PropertyAmenityLinkModel(
                 property_id=model.id,
@@ -120,15 +140,15 @@ class PropertyRepository:
         
         model.amenity_links = new_links
 
-    def _sync_room_amenities(self, room_model: models.RoomModel, amenities: List[entities.RoomAmenity]):
+    def _sync_room_amenities(self, room_model: models.RoomModel, room_amenity_entities: List[entities.RoomAmenity]):
         
         room_model.amenity_links = []
         
-        if not amenities:
+        if not room_amenity_entities:
             return
 
         new_links = []
-        for a_entity in amenities:
+        for a_entity in room_amenity_entities:
             link = models.RoomAmenityLinkModel(
                 room_id=room_model.id,
                 amenity_id=a_entity.id,

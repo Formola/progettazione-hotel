@@ -106,7 +106,7 @@ class RoomRepository:
     ## per capire cosa aggiungere, cosa rimuovere, cosa aggiornare.
     ## esempio: se un'amenity è stata rimossa, 
 
-    def _sync_amenities(self, model: models.RoomModel, amenity_entities: List[entities.RoomAmenity]):
+    def _sync_amenities(self, model: models.RoomModel, room_amenity_entities: List[entities.RoomAmenity]):
         """
         Handles the Many-to-Many relationship with Room Amenities via the link table.
         """
@@ -114,11 +114,11 @@ class RoomRepository:
         # Note: thanks to cascade="all, delete-orphan", removing from the list deletes from the DB
         model.amenity_links = [] 
 
-        if not amenity_entities:
+        if not room_amenity_entities:
             return
 
         new_links = []
-        for am_entity in amenity_entities:
+        for am_entity in room_amenity_entities:
             # Creiamo il Link Model esplicitamente
             link = models.RoomAmenityLinkModel(
                 room_id=model.id,
@@ -131,8 +131,8 @@ class RoomRepository:
 
     def _sync_media(self, model: models.RoomModel, media_entities: List[entities.Media]):
         """
-        Gestisce la relazione One-to-Many con i Media della stanza.
-        Logica: Aggiorna esistenti, Crea nuovi, Rimuove orfani.
+        Sync One-to-Many relationship with Media.
+        Handles Inserts, Updates, and Deletes of Media associated with the Room.
         """
         # Mappa dei media esistenti nel DB per questa stanza {id: oggetto_orm}
         db_media_map = {m.id: m for m in model.media}

@@ -107,7 +107,6 @@ class Media:
     storage_path: str
     description: Optional[str] = None
     file_type: Optional[str] = None
-    # Nota: property_id e room_id sono impliciti nella struttura gerarchica
 
 
 ## ROOM
@@ -145,9 +144,9 @@ class Room:
             
             
             
-    def remove_amenity(self, amenity_id: str):
+    def remove_amenity(self, room_amenity_id: str):
         # Ricrea la lista escludendo quello con l'ID target
-        self.amenities = [a for a in self.amenities if a.id != amenity_id]
+        self.amenities = [a for a in self.amenities if a.id != room_amenity_id]
 
     def update_price(self, new_price: float):
         if new_price <= 0:
@@ -221,21 +220,21 @@ class Property:
         return self.owner_id == user_id
     
     
-    def add_amenity(self, amenity: PropertyAmenity, custom_description: Optional[str] = None):
-        if not isinstance(amenity, PropertyAmenity):
+    def add_amenity(self, property_amenity: PropertyAmenity, custom_description: Optional[str] = None):
+        if not isinstance(property_amenity, PropertyAmenity):
             raise TypeError("Can only add PropertyAmenity to a Property")
             
         # Aggiorna descrizione custom se presente
         if custom_description:
-            amenity.custom_description = custom_description
+            property_amenity.custom_description = custom_description
 
         # Controllo duplicati basato su ID per evitare di aggiungere lo stesso servizio due volte
-        exists = any(a.id == amenity.id for a in self.amenities)
+        exists = any(a.id == property_amenity.id for a in self.amenities)
         
         if not exists:
-            self.amenities.append(amenity)
+            self.amenities.append(property_amenity)
         else:
             # Se esiste già, aggiorniamo la descrizione (logica opzionale ma utile)
             for a in self.amenities:
-                if a.id == amenity.id:
+                if a.id == property_amenity.id:
                     a.custom_description = custom_description
