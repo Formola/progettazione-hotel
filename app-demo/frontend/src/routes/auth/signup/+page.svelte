@@ -1,7 +1,7 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     // IMPORTO LA TUA NUOVA API
-    import { authApi } from '$lib/api/auth';
+    import { authApi } from '$lib/api/authApi';
     import type { UserData } from '$lib/types';
 
     let email = $state("");

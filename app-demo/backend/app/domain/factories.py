@@ -12,7 +12,8 @@ class AmenityFactory(ABC):
         name: str = "", 
         category: str = "", 
         description: str = "",
-        custom_description: Optional[str] = None
+        custom_description: Optional[str] = None,
+        is_global: bool = False
     ) -> entities.IAmenity:
         
         """
@@ -30,7 +31,8 @@ class PropertyAmenityFactory(AmenityFactory):
         name: str = "", 
         category: str = "", 
         description: str = "",
-        custom_description: Optional[str] = None
+        custom_description: Optional[str] = None,
+        is_global: bool = False
     ) -> entities.PropertyAmenity:
 
         return entities.PropertyAmenity(
@@ -38,7 +40,8 @@ class PropertyAmenityFactory(AmenityFactory):
             name=name,
             category=category,
             description=description,
-            custom_description=custom_description 
+            custom_description=custom_description,
+            is_global=is_global
         )
 
 class RoomAmenityFactory(AmenityFactory):
@@ -49,7 +52,8 @@ class RoomAmenityFactory(AmenityFactory):
         name: str = "", 
         category: str = "", 
         description: str = "",
-        custom_description: Optional[str] = None
+        custom_description: Optional[str] = None,
+        is_global: bool = False
     ) -> entities.RoomAmenity:
         
         return entities.RoomAmenity(
@@ -57,5 +61,6 @@ class RoomAmenityFactory(AmenityFactory):
             name=name,
             category=category,
             description=description,
-            custom_description=custom_description
+            custom_description=custom_description,
+            is_global=is_global
         )

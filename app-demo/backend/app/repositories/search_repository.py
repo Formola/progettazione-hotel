@@ -74,15 +74,17 @@ class SearchRepository:
             # -----------------------------
             # Qui estraiamo anche description (catalogo) e custom_description (link)
             sql_h_amenities = """
-                SELECT l.property_id, a.id, a.name, a.category,
-                       a.description,          -- Descrizione generica
-                       l.custom_description    -- Descrizione custom
+                SELECT l.property_id, a.id, a.name, a.category, a.is_global, 
+                       a.description,          
+                       l.custom_description    
                 FROM property_amenities a
                 JOIN property_amenities_link l ON a.id = l.amenity_id
                 WHERE l.property_id = ANY(:hotel_ids)
             """
             h_amenities = self.db.execute(text(sql_h_amenities), {"hotel_ids": hotel_ids}).mappings().all()
-
+            
+            print(f"Hotel Amenities: {h_amenities}")
+            
             # -----------------------------
             # Room Amenities
             # -----------------------------
@@ -90,15 +92,14 @@ class SearchRepository:
             r_amenities = []
             if room_ids:
                 sql_r_amenities = """
-                    SELECT l.room_id, a.id, a.name, a.category,
-                           a.description,          -- Descrizione generica
-                           l.custom_description    -- Descrizione custom
+                    SELECT l.room_id, a.id, a.name, a.category, a.is_global,
+                           a.description,          
+                           l.custom_description    
                     FROM room_amenities a
                     JOIN room_amenities_link l ON a.id = l.amenity_id
                     WHERE l.room_id = ANY(:room_ids)
                 """
-                r_amenities = self.db.execute(text(sql_r_amenities), {"room_ids": room_ids}).mappings().all()
-
+            r_amenities = self.db.execute(text(sql_r_amenities), {"room_ids": room_ids}).mappings().all()
             # -----------------------------
             # Data Assembly (Manual Mapping)
             # -----------------------------
@@ -148,7 +149,8 @@ class SearchRepository:
                         "name": a["name"],
                         "category": a["category"],
                         "description": a["description"],       
-                        "custom_description": a["custom_description"] 
+                        "custom_description": a["custom_description"],
+                        "is_global": a["is_global"]
                     })
 
             # Mappa Amenities Rooms (Con i nuovi campi)
@@ -159,7 +161,8 @@ class SearchRepository:
                         "name": a["name"],
                         "category": a["category"],
                         "description": a["description"],          
-                        "custom_description": a["custom_description"] 
+                        "custom_description": a["custom_description"],
+                        "is_global": a["is_global"]
                     })
 
             return list(hotels_map.values())

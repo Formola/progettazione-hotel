@@ -3,7 +3,7 @@
 // ==========================================
 export type PropertyStatus = 'DRAFT' | 'PUBLISHED' | 'INACTIVE';
 export type RoomType = 'SINGLE' | 'DOUBLE' | 'SUITE';
-export type MediaType = 'image/png' | 'image/jpeg' | 'video/mp4'; 
+export type MediaType = 'image/png' | 'image/jpeg' | 'image/jpg' | 'video/mp4';
 export type UserRole = 'GUEST' | 'OWNER' | 'ADMIN';
 
 // ==========================================
@@ -11,11 +11,14 @@ export type UserRole = 'GUEST' | 'OWNER' | 'ADMIN';
 // ==========================================
 
 // INPUT: Payload per caricare un file
-export interface MediaUpload {
+export interface MediaInput {
     fileName: string;     
-    fileType: MediaType;
+    fileType: MediaType
     base64Data: string; 
     description?: string;
+    
+    propertyId?: string;
+    roomId?: string;
 }
 
 // OUTPUT: Oggetto visualizzato nel carosello (Match JSON Backend)
@@ -36,6 +39,7 @@ interface BaseAmenity {
     id: string;
     name: string;
     category: string;
+    is_global: boolean;
     icon?: string; // Se lo gestisci nel frontend mapping
     
     description?: string | null;       // Descrizione generica (dal catalogo)
@@ -45,6 +49,21 @@ interface BaseAmenity {
 // OUTPUT: Distinzione semantica
 export interface PropertyAmenity extends BaseAmenity {}
 export interface RoomAmenity extends BaseAmenity {}
+
+export const AMENITY_CATEGORIES = [
+    'General',
+    'Services',
+    'Wellness', 
+    'Comfort', 
+    'Activities', 
+    'Food & Drink',
+    'Views',
+    'Bathroom',
+    'Security'
+] as const;
+
+// Tipo derivato dalla lista
+export type AmenityCategory = typeof AMENITY_CATEGORIES[number];
 
 export interface NewAmenityInput {
     name: string;
@@ -102,6 +121,7 @@ export interface PropertyInput {
     description: string;
     
     amenities: AmenityLinkInput[];
+    new_amenities?: NewAmenityInput[];
     media_ids?: string[];
 }
 

@@ -44,11 +44,16 @@ def get_or_create_user_from_headers(
 def get_current_user(
     x_user_cognito_sub: str = Header(..., alias="x-user-cognito-sub"),
     x_user_email: Optional[str] = Header(..., alias="x-user-email"),
-    x_user_role: Optional[str] = Header(..., alias="x-user-role"),
+    x_user_role: Optional[str] = Header(None, alias="x-user-role"), # Cambiato in Optional[str]
     user_repo: UserRepository = Depends(get_user_repo)
 ) -> entities.User:
 
-    if x_user_role != "OWNER":
+    # Log per debug: controlla cosa arriva esattamente negli header
+    print(f"DEBUG: x-user-role ricevuto: {x_user_role}")
+
+    # Verifica se "OWNER" è presente nella stringa del ruolo 
+    # (gestisce sia "OWNER" che '["OWNER"]')
+    if not x_user_role or "OWNER" not in x_user_role:
         raise HTTPException(403, "Owners only")
 
     return get_or_create_user_from_headers(
@@ -140,3 +145,10 @@ def get_room_service(
     media_repo: MediaRepository = Depends(get_media_repo)
 ) -> RoomService:
     return RoomService(room_repo, room_amenity_factory, amenity_repo, property_repo, media_repo)
+
+
+def get_property_amenity_repo(db: Session = Depends(get_db)) -> PropertyAmenityRepository:
+    return PropertyAmenityRepository(db)
+
+def get_room_amenity_repo(db: Session = Depends(get_db)) -> RoomAmenityRepository:
+    return RoomAmenityRepository(db)

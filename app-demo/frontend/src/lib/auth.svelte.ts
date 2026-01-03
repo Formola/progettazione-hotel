@@ -1,4 +1,4 @@
-import { authApi } from '$lib/api/auth';
+import { authApi } from '$lib/api/authApi';
 import type { UserData } from '$lib/types';
 
 class AuthState {

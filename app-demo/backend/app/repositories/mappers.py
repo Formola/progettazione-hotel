@@ -41,7 +41,8 @@ def to_domain_property_amenity(model: models.PropertyAmenityModel) -> entities.P
         id=model.id,
         name=model.name,
         category=model.category,
-        description=model.description
+        description=model.description,
+        is_global=model.is_global
     )
 
 def to_domain_room_amenity(model: models.RoomAmenityModel) -> entities.RoomAmenity:
@@ -49,7 +50,8 @@ def to_domain_room_amenity(model: models.RoomAmenityModel) -> entities.RoomAmeni
         id=model.id,
         name=model.name,
         category=model.category,
-        description=model.description
+        description=model.description,
+        is_global=model.is_global
     )
 
 # ==========================================
@@ -99,7 +101,8 @@ def to_domain_room(model: models.RoomModel) -> entities.Room:
                 name=link.amenity.name,
                 category=link.amenity.category,
                 description=link.amenity.description,
-                custom_description=link.custom_description
+                custom_description=link.custom_description,
+                is_global=link.amenity.is_global
             )
         )
 
@@ -147,7 +150,8 @@ def to_domain_property(model: models.PropertyModel) -> entities.Property:
                     name=link.amenity.name,
                     category=link.amenity.category,
                     description=link.amenity.description,
-                    custom_description=link.custom_description # Campo Custom
+                    custom_description=link.custom_description, # Campo Custom
+                    is_global=link.amenity.is_global
                 )
             )
 

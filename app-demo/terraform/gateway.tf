@@ -9,7 +9,7 @@ resource "aws_apigatewayv2_api" "main_api" {
   cors_configuration {
     allow_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
     allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    allow_headers = ["content-type", "authorization"]
+    allow_headers = ["content-type", "authorization", "x-user-cognito-sub", "x-user-email", "x-user-role"]
     max_age       = 300
   }
 }

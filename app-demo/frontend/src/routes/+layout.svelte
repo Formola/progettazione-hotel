@@ -5,7 +5,7 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
 	import {onMount} from 'svelte';
-	import {authApi} from '$lib/api/auth';
+	import {authApi} from '$lib/api/authApi';
 
     let { children } = $props();
 

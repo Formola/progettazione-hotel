@@ -33,6 +33,7 @@ class Amenity(BaseModel):
     name: str
     category: str
     description: Optional[str] = None
+    is_global: bool = False
 
     model_config = ConfigDict(from_attributes=True)
     

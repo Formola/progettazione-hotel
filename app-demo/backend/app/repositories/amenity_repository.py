@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from ast import List
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from app.domain import entities
 from app.models import models
@@ -32,7 +33,8 @@ class PropertyAmenityRepository(AmenityRepository):
                 id=entity.id,
                 name=entity.name,
                 category=entity.category,
-                description=entity.description
+                description=entity.description,
+                is_global=entity.is_global
                 # NOTA: Qui NON salviamo custom_description, perché questa è la tabella del dominio, non il link
             )
             self.db.add(model)
@@ -59,7 +61,8 @@ class PropertyAmenityRepository(AmenityRepository):
             id=model.id,
             name=model.name,
             category=model.category,
-            description=model.description
+            description=model.description,
+            is_global=model.is_global
         )
         
     def get_by_name(self, name: str) -> Optional[entities.PropertyAmenity]:
@@ -74,8 +77,28 @@ class PropertyAmenityRepository(AmenityRepository):
             id=model.id,
             name=model.name,
             category=model.category,
-            description=model.description
+            description=model.description,
+            is_global=model.is_global
         )
+        
+    # fetch all global amenities (for dropdowns, etc.)
+    def get_all(self) -> List[entities.PropertyAmenity]:
+        # Filtra per is_global == True
+        models_list = (
+            self.db.query(models.PropertyAmenityModel)
+            .filter(models.PropertyAmenityModel.is_global == True) 
+            .all()
+        )
+        
+        return [
+            entities.PropertyAmenity(
+                id=m.id,
+                name=m.name,
+                category=m.category,
+                description=m.description,
+                is_global=m.is_global
+            ) for m in models_list
+        ]
 
 class RoomAmenityRepository(AmenityRepository):
     def __init__(self, db: Session):
@@ -90,7 +113,8 @@ class RoomAmenityRepository(AmenityRepository):
                 id=entity.id,
                 name=entity.name,
                 category=entity.category,
-                description=entity.description
+                description=entity.description,
+                is_global=entity.is_global
             )
             self.db.add(model)
         else:
@@ -115,7 +139,8 @@ class RoomAmenityRepository(AmenityRepository):
             id=model.id,
             name=model.name,
             category=model.category,
-            description=model.description
+            description=model.description,
+            is_global=model.is_global
         )
     
     def get_by_name(self, name: str) -> Optional[entities.RoomAmenity]:
@@ -130,5 +155,25 @@ class RoomAmenityRepository(AmenityRepository):
             id=model.id,
             name=model.name,
             category=model.category,
-            description=model.description
+            description=model.description,
+            is_global=model.is_global
         )
+        
+    # fetch all global amenities (for dropdowns, etc.)
+    def get_all(self) -> List[entities.RoomAmenity]:
+        # Filtra per is_global == True
+        models_list = (
+            self.db.query(models.RoomAmenityModel)
+            .filter(models.RoomAmenityModel.is_global == True) 
+            .all()
+        )
+        
+        return [
+            entities.RoomAmenity(
+                id=m.id,
+                name=m.name,
+                category=m.category,
+                description=m.description,
+                is_global=m.is_global
+            ) for m in models_list
+        ]

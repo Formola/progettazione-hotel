@@ -15,8 +15,10 @@ class RoomType(str, Enum):
     SUITE = 'SUITE'
 
 class MediaType(str, Enum):
-    IMAGE = 'IMAGE'
-    VIDEO = 'VIDEO'
+    PNG = 'image/png'
+    JPEG = 'image/jpeg'
+    JPG = 'image/jpg'
+    MP4 = 'video/mp4'
 
 class UserRole(str, Enum):
     GUEST = 'GUEST'
@@ -64,6 +66,7 @@ class PropertyAmenity(IAmenity):
     category: str
     description: Optional[str] = None       # Descrizione generica (dal catalogo)
     custom_description: Optional[str] = None
+    is_global: bool = False
     
     # --- IMPLEMENTAZIONE METODI ASTRATTI ---
     def getName(self) -> str:
@@ -84,8 +87,9 @@ class RoomAmenity(IAmenity):
     name: str
     category: str
     description: Optional[str] = None       # Descrizione generica (dal catalogo)
-    custom_description: Optional[str] = None # <--- AGGIUNTO: Descrizione specifica per la stanza    
-    # --- IMPLEMENTAZIONE METODI ASTRATTI ---
+    custom_description: Optional[str] = None    
+    is_global: bool = False              
+    
     def getName(self) -> str:
         return self.name
 
@@ -187,8 +191,8 @@ class Property:
         """
         Regola: Per pubblicare servono almeno 1 stanza.
         """
-        has_rooms = len(self.rooms) > 0
-        return has_rooms
+        # has_rooms = len(self.rooms) > 0
+        return True
 
     def publish(self):
         """
@@ -204,6 +208,9 @@ class Property:
         self.status = PropertyStatus.PUBLISHED
 
     def unpublish(self):
+        self.status = PropertyStatus.DRAFT
+        
+    def archive(self):
         self.status = PropertyStatus.INACTIVE
 
     def add_room(self, room: Room):

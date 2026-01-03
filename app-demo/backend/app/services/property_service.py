@@ -83,7 +83,9 @@ class PropertyService:
             description=data.description,
             status=entities.PropertyStatus.DRAFT,
             amenities=final_amenities, # Contiene sia vecchie che nuove
-            media=property_media
+            media=property_media,
+            
+            
         )
         
         return self.property_repo.save(new_property)
@@ -107,6 +109,30 @@ class PropertyService:
 
         # Save
         return self.property_repo.save(prop)
+    
+    def unpublish_property(self, property_id: str, owner: entities.User) -> entities.Property:
+        prop = self.property_repo.get_by_id(property_id)
+        if not prop:
+            raise HTTPException(status_code=404, detail="Property not found")
+
+        if not prop.is_owned_by(owner.id):
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        prop.unpublish()
+
+        return self.property_repo.save(prop)
+    
+    def archive_property(self, property_id: str, owner: entities.User) -> entities.Property:
+        prop = self.property_repo.get_by_id(property_id)
+        if not prop:
+            raise HTTPException(status_code=404, detail="Property not found")
+
+        if not prop.is_owned_by(owner.id):
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        prop.archive()
+
+        return self.property_repo.save(prop)
 
     def delete_property(self, property_id: str, owner: entities.User) -> None:
         prop = self.property_repo.get_by_id(property_id)
@@ -117,7 +143,7 @@ class PropertyService:
         if not prop.is_owned_by(owner.id):
             raise HTTPException(status_code=403, detail="Not authorized")
 
-        self.property_repo.delete(prop)
+        self.property_repo.delete(prop.id)
         
     def update_property(self, property_id: str, data: PropertyInput, owner: entities.User) -> entities.Property:
         prop = self.property_repo.get_by_id(property_id)

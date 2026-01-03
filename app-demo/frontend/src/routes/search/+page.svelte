@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation'; // Serve per cambiare ricerca
-	import { searchApi } from '$lib/api/search';
+	import { searchApi } from '$lib/api/searchApi';
 	import type { PropertyData } from '$lib/types';
 	import PropertyCard from '$lib/components/PropertyCard.svelte';
 	import {auth} from '$lib/auth.svelte';

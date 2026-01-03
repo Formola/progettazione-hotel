@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { config } from '$lib/config';
-import { authApi } from './auth';
+import { authApi } from './authApi';
 import {isExpiringSoon} from '$lib/utils/jtw';
 
 // Crea l'istanza base

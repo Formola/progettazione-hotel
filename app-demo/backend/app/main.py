@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import search, properties, rooms, media
+from app.routers import search, properties, rooms, media, amenity
 from app.config import settings
 
 app = FastAPI(title="HotelManager API")
@@ -24,6 +24,7 @@ app.include_router(search.router)
 app.include_router(properties.router)
 app.include_router(rooms.router)
 app.include_router(media.router)
+app.include_router(amenity.router)
 
 @app.get("/health")
 def health():

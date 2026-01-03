@@ -62,6 +62,7 @@ class PropertyAmenityModel(Base):
     name = Column(String, nullable=False)
     category = Column(String)
     description = Column(Text) # Descrizione generica dal catalogo
+    is_global = Column(Boolean, default=False) # Indica se è un'amenity globale o personalizzata
     
     # Nota: Non definiamo relationship inverse complesse qui per evitare cicli,
     # se serve trovare le property che hanno questa amenity, si fa via query sul LinkModel.
@@ -74,6 +75,7 @@ class RoomAmenityModel(Base):
     name = Column(String, nullable=False)
     category = Column(String)
     description = Column(Text) # Descrizione generica dal catalogo
+    is_global = Column(Boolean, default=False) # Indica se è un'amenity globale o personalizzata
 
 
 class PropertyModel(Base):

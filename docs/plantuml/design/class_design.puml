@@ -20,15 +20,24 @@ class PropertyApi {
     +createProperty(data: PropertyInput): PropertyData
     +getMyProperties(): PropertyData[]
     +getPropertyById(property_id: String): PropertyData
-    +publishProperty(property_id: String): PropertyData
     +updateProperty(property_id: String, data: PropertyInput): PropertyData
     +deleteProperty(property_id: String): void
+    +publishProperty(property_id: String): PropertyData
+    +unpublishProperty(property_id: String): PropertyData
+    +archiveProperty(property_id: String): PropertyData
+    
+    +getRoomsForProperty(property_id: String): RoomData[]
+    +addRoomToProperty(property_id: String, data: RoomInput): RoomData
+
+    +getAmenityCatalog(): PropertyAmenity[]
 }
 
 class RoomApi {
     +addRoom(property_id: String, data: RoomInput): RoomData
     +updateRoom(room_id: String, data: RoomInput): RoomData
     +deleteRoom(room_id: String): void
+
+    +getAmenityCatalog(): RoomAmenity[]
 }
 
 class MediaApi {
@@ -63,6 +72,8 @@ class PropertyService {
     +get_property_by_id(property_id: String): Property
     +create_property(data: PropertyInput, owner: User): Property
     +publish_property(property_id: String, owner: User): Property
+    +unpublish_property(property_id: String, owner: User): Property
+    +archive_property(property_id: String, owner: User): Property
     +delete_property(property_id: String, owner: User): void
     +update_property(property_id: String, data: PropertyInput): Property
 }
@@ -205,6 +216,7 @@ class Property {
     +publish(): void
     +can_be_published(): boolean
     +unpublish(): void
+    +archive(): void
     +add_room(room: Room): void
     +remove_room(room_id: String): void
     +is_owned_by(user_id: String): boolean

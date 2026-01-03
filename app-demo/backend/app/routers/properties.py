@@ -28,7 +28,7 @@ def get_my_properties(
 ):
     
     """
-    Ritorna tutte le proprietà dell'owner loggato.
+    Returns all properties owned by the current user.
     """
     
     return service.get_user_properties(owner=current_user)
@@ -40,7 +40,7 @@ def get_property_details(
 ):
     
     """
-    Ritorna i dettagli di una proprietà specifica.
+    Returns the details of a specific property by its ID.
     """
     
     return service.get_property_by_id(property_id)
@@ -52,7 +52,7 @@ def get_properties_by_owner(
     service: PropertyService = Depends(deps.get_property_service)
 ):
     """
-    Ritorna tutte le proprietà di un owner specifico.
+    Returns all properties owned by a specific owner ID.
     """
     return service.get_user_properties(owner_id=owner_id, owner=None)
 
@@ -77,6 +77,28 @@ def publish_property(
     """
     
     return service.publish_property(property_id=property_id, owner=current_user)
+
+
+@router.post("/{property_id}/unpublish", response_model=PropertyData)
+def unpublish_property(
+    property_id: str,
+    service: PropertyService = Depends(deps.get_property_service),
+    current_user: User = Depends(deps.get_current_user)
+):
+    # Chiama service.unpublish_property che userà entity.unpublish()
+    return service.unpublish_property(property_id=property_id, owner=current_user)
+
+@router.post("/{property_id}/archive", response_model=PropertyData)
+def archive_property(
+    property_id: str,
+    service: PropertyService = Depends(deps.get_property_service),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Archive a property owned by the current user.
+    """
+    
+    return service.archive_property(property_id=property_id, owner=current_user)
 
 @router.delete("/{property_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_property(

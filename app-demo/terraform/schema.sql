@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS property_amenities (
     name VARCHAR(100) NOT NULL,
     description TEXT,
     category VARCHAR(50),
+    is_global BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -84,6 +85,7 @@ CREATE TABLE IF NOT EXISTS room_amenities (
     name VARCHAR(100) NOT NULL,
     description TEXT,
     category VARCHAR(50),
+    is_global BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -195,31 +197,33 @@ ON CONFLICT (id) DO NOTHING;
 -- PROPERTY AMENITIES (10 essenziali)
 -- ==========================================
 
-INSERT INTO property_amenities (id, name, category, description) VALUES
-('pa_wifi', 'Free WiFi', 'Generale', 'High-speed wireless internet access throughout the property'),
-('pa_pool', 'Pool', 'Generale', 'Outdoor or indoor swimming pool available for guests'),
-('pa_parking', 'Parking', 'Generale', 'Free parking facilities on-site or nearby'),
-('pa_gym', 'Gym', 'Fitness & Wellness', 'Fully equipped fitness center with modern equipment'),
-('pa_spa', 'Spa & Wellness', 'Fitness & Wellness', 'Spa facilities including massage and wellness treatments'),
-('pa_restaurant', 'Restaurant', 'Ristorazione', 'On-site restaurant serving breakfast, lunch, and dinner'),
-('pa_bar', 'Bar', 'Ristorazione', 'Bar or lounge area serving drinks and light snacks'),
-('pa_beach', 'Beach Access', 'Outdoor', 'Direct beach access or beach shuttle service'),
-('pa_pets', 'Pet-Friendly', 'Servizi', 'Pets are welcome with additional fees'),
-('pa_reception24', 'Reception 24h', 'Servizi', '24-hour front desk service and concierge')
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO property_amenities (id, name, category, description, is_global) VALUES
+('pa_wifi', 'Free WiFi', 'Generale', 'High-speed wireless internet access throughout the property', TRUE),
+('pa_pool', 'Pool', 'Generale', 'Outdoor or indoor swimming pool available for guests', TRUE),
+('pa_parking', 'Parking', 'Generale', 'Free parking facilities on-site or nearby', TRUE),
+('pa_gym', 'Gym', 'Fitness & Wellness', 'Fully equipped fitness center with modern equipment', TRUE),
+('pa_spa', 'Spa & Wellness', 'Fitness & Wellness', 'Spa facilities including massage and wellness treatments', TRUE),
+('pa_restaurant', 'Restaurant', 'Ristorazione', 'On-site restaurant serving breakfast, lunch, and dinner', TRUE),
+('pa_bar', 'Bar', 'Ristorazione', 'Bar or lounge area serving drinks and light snacks', TRUE),
+('pa_beach', 'Beach Access', 'Outdoor', 'Direct beach access or beach shuttle service', TRUE),
+('pa_pets', 'Pet-Friendly', 'Servizi', 'Pets are welcome with additional fees', TRUE),
+('pa_reception24', 'Reception 24h', 'Servizi', '24-hour front desk service and concierge', TRUE)
+ON CONFLICT (id) DO UPDATE 
+SET is_global = TRUE;
 
 -- ==========================================
 -- ROOM AMENITIES (6 essenziali)
 -- ==========================================
 
-INSERT INTO room_amenities (id, name, category, description) VALUES
-('ra_ac', 'Air Conditioning', 'Comfort', 'Individual climate control in each room'),
-('ra_tv', 'Satellite TV', 'Entertainment', 'Flat-screen TV with satellite or cable channels'),
-('ra_hairdryer', 'Hairdryer', 'Bathroom', 'Hairdryer available in the bathroom'),
-('ra_minibar', 'Minibar', 'Comfort', 'Mini refrigerator stocked with beverages and snacks'),
-('ra_safe', 'Safe', 'Security', 'In-room safe for valuables'),
-('ra_balcony', 'Balcony/View', 'View & Space', 'Private balcony or room with scenic view')
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO room_amenities (id, name, category, description, is_global) VALUES
+('ra_ac', 'Air Conditioning', 'Comfort', 'Individual climate control in each room', TRUE),
+('ra_tv', 'Satellite TV', 'Entertainment', 'Flat-screen TV with satellite or cable channels', TRUE),
+('ra_hairdryer', 'Hairdryer', 'Bathroom', 'Hairdryer available in the bathroom', TRUE),
+('ra_minibar', 'Minibar', 'Comfort', 'Mini refrigerator stocked with beverages and snacks', TRUE),
+('ra_safe', 'Safe', 'Security', 'In-room safe for valuables', TRUE),
+('ra_balcony', 'Balcony/View', 'View & Space', 'Private balcony or room with scenic view', TRUE)
+ON CONFLICT (id) DO UPDATE 
+SET is_global = TRUE;
 
 -- ==========================================
 -- PROPERTIES (10 Hotel)
