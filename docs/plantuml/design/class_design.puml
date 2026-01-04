@@ -118,20 +118,19 @@ class UserRepository {
 
 class PropertyRepository {
     -db: Session <<SQLAlchemy>>
+    -storage: IMediaStorage
     +save(entity: Property): Property
     +get_by_id(property_id: String): Property
     +get_by_owner_id(owner_id: String): List<Property>
     +delete(property_id: String): void
     - _sync_amenities(model: PropertyModel <<ORM>>, property_amenity_entities: List<PropertyAmenity>): void
-    - _sync_room_amenities(room_model: RoomModel <<ORM>>, room_amenity_entities: List<RoomAmenity>): void
-    - _sync_rooms_insert(model: PropertyModel <<ORM>>, room_entities: List<Room>): void
-    - _sync_rooms_update(model: PropertyModel <<ORM>>, room_entities: List<Room>): void
     - _sync_media_insert(model: PropertyModel <<ORM>>, media_entities: List<Media>): void
     - _sync_media_update(model: PropertyModel <<ORM>>, media_entities: List<Media>): void
 }
 
 class RoomRepository {
     -db: Session <<SQLAlchemy>>
+    -storage: IMediaStorage
     +save(entity: Room): Room
     +get_by_id(room_id: String): Room
     +get_by_property_id(property_id: String): List<Room>
@@ -142,6 +141,7 @@ class RoomRepository {
 
 class MediaRepository {
     -db: Session
+    -storage: IMediaStorage
     +save(entity: Media, property_id: String, room_id: String): void
     +get_by_id(media_id: String): Media
     +list_by_property(property_id: String): List<Media>

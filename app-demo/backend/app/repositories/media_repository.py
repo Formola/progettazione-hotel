@@ -3,10 +3,12 @@ from sqlalchemy.orm import Session
 from app.domain import entities
 from app.models import models
 from app.repositories import mappers
+from app.storage.media_storage_interface import IMediaStorage
 
 class MediaRepository:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, storage: IMediaStorage):
         self.db = db
+        self.storage = storage
 
     def get_by_id(self, media_id: str) -> Optional[entities.Media]:
         model = self.db.query(models.MediaModel).get(media_id)
@@ -46,8 +48,14 @@ class MediaRepository:
     def delete(self, media_id: str):
         model = self.db.query(models.MediaModel).get(media_id)
         if model:
+            
+            path_to_delete = model.storage_path
+            
             self.db.delete(model)
             self.db.commit()
+            
+            if path_to_delete:
+                self.storage.delete_media(path_to_delete)
             
             
     def list_by_property(self, property_id: str) -> list[entities.Media]:

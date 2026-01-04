@@ -677,7 +677,7 @@
                 </div>
             </section>
             <footer class="modal-card-foot has-background-white-ter border-light" style="justify-content: flex-end;">
-                <button class="button has-text-grey-darker" onclick={() => isRoomModalOpen = false}>Cancel</button>
+                <button class="button" onclick={() => isRoomModalOpen = false}>Cancel</button>
                 <button class="button is-success has-text-weight-bold shadow-sm {isSaving ? 'is-loading' : ''}" onclick={saveRoom}>{editingRoomId ? 'Update Room' : 'Save Room'}</button>
             </footer>
         </div>

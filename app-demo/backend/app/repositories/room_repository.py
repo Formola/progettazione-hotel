@@ -6,11 +6,13 @@ from app.domain import entities
 from app.models import models  
 from app.repositories import mappers
 from sqlalchemy.orm import selectinload
+from app.storage.media_storage_interface import IMediaStorage
 
 
 class RoomRepository:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, storage: IMediaStorage):
         self.db = db
+        self.storage = storage
 
     def get_by_id(self, room_id: str) -> Optional[entities.Room]:
         stmt = (
@@ -57,6 +59,8 @@ class RoomRepository:
     def save(self, entity: entities.Room) -> entities.Room:
         # Recupera il modello esistente
         existing_model = self.db.query(models.RoomModel).get(entity.id)
+        
+        files_to_delete_on_success: List[str] = [] # Percorsi dei file da cancellare dopo il commit
 
         if existing_model:
             # UPDATE
@@ -70,9 +74,10 @@ class RoomRepository:
             # Sync Amenities (Many-to-Many)
             self._sync_amenities(existing_model, entity.amenities)
 
-            # Sync Media (One-to-Many)
-            self._sync_media(existing_model, entity.media)
-
+            # Sync Media: Raccogliamo i file da cancellare
+            deleted_paths = self._sync_media(existing_model, entity.media)
+            files_to_delete_on_success.extend(deleted_paths)
+            
             self.db.add(existing_model)
 
         else:
@@ -86,24 +91,31 @@ class RoomRepository:
             self.db.add(new_model)
 
         self.db.commit()
+        
+        for path in files_to_delete_on_success:
+            self.storage.delete_media(path)
+            
         # Ritorniamo l'entità ricaricata dal DB per essere sicuri
         return self.get_by_id(entity.id)
 
     def delete(self, room_id: str):
         model = self.db.query(models.RoomModel).get(room_id)
         if model:
-            # Identifichiamo le custom amenities candidate alla pulizia
+            # SNAPSHOT MEDIA: Salva i path prima che il DB li cancelli
+            paths_to_delete = [m.storage_path for m in model.media]
+
+            # SNAPSHOT AMENITIES
             linked_amenity_ids = [
                 link.amenity_id 
                 for link in model.amenity_links 
                 if not link.amenity.is_global
             ]
 
-            # Delete stanza (cascade sui link)
+            # DB DELETE
             self.db.delete(model)
             self.db.flush()
 
-            # 3. Clean up orfani
+            # CLEANUP AMENITIES
             if linked_amenity_ids:
                 stmt = (
                     delete(models.RoomAmenityModel)
@@ -118,6 +130,11 @@ class RoomRepository:
                 self.db.execute(stmt)
 
             self.db.commit()
+
+            # CLEANUP FILE FISICI
+            for path in paths_to_delete:
+                if path:
+                    self.storage.delete_media(path)
             
         # print("deleted amenities:", linked_amenity_ids)
 
@@ -192,28 +209,29 @@ class RoomRepository:
             
         # print("eliminated orphaned amenities:", ids_to_unlink)
 
-    def _sync_media(self, model: models.RoomModel, media_entities: List[entities.Media]):
+    def _sync_media(self, model: models.RoomModel, media_entities: List[entities.Media]) -> List[str]:
         """
-        Sync One-to-Many relationship with Media.
-        Handles Inserts, Updates, and Deletes of Media associated with the Room.
+        Sync One-to-Many relationship.
+        Ritorna una lista di storage_paths che devono essere cancellati DOPO il commit.
         """
-        # Mappa dei media esistenti nel DB per questa stanza {id: oggetto_orm}
-        db_media_map = {m.id: m for m in model.media}
+        current_media_map = {m.id: m for m in model.media}
+        incoming_ids = {m.id for m in media_entities}
         
-        updated_media_list = []
+        # Identifica file da rimuovere
+        removed_media = [m for m_id, m in current_media_map.items() if m_id not in incoming_ids]
+        paths_to_delete = [m.storage_path for m in removed_media if m.storage_path]
 
+        updated_media_list = []
         for m_entity in media_entities:
-            if m_entity.id in db_media_map:
-                # UPDATE: Il media esiste, aggiorniamo solo i metadati (es. descrizione)
-                existing_media = db_media_map[m_entity.id]
-                existing_media.description = m_entity.description
-                # file_name e path di solito non cambiano durante un update stanza, 
-                updated_media_list.append(existing_media)
+            if m_entity.id in current_media_map:
+                existing = current_media_map[m_entity.id]
+                existing.description = m_entity.description
+                updated_media_list.append(existing)
             else:
-                # INSERT: Nuovo media aggiunto alla lista
                 new_media = mappers.to_model_media(m_entity, room_id=model.id)
                 updated_media_list.append(new_media)
         
-        # DELETE (Orphan Removal): Assegnando la nuova lista, SQLAlchemy
-        # rimuoverà dal DB i media che erano in db_media_map ma non in updated_media_list.
         model.media = updated_media_list
+        
+        # NON cancelliamo qui. Ritorniamo la lista al chiamante.
+        return paths_to_delete
