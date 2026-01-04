@@ -83,7 +83,6 @@ export class AuthService {
             // Rimuove TUTTO dal localStorage
             Object.values(this.keys).forEach(key => localStorage.removeItem(key));
         }
-        // Qui redirect tramite window.location o callback
     }
 
     // Helper privato per salvare tutto in un colpo solo

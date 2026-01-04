@@ -33,6 +33,11 @@
         }
     }
 
+    async function handleLogout() {
+        await auth.logout();
+        goto('/');
+    }
+
     // --- DELETE ---
     async function handleDelete(id: string) {
         if (!confirm('Are you sure? This cannot be undone.')) return;
@@ -49,7 +54,6 @@
         }
     }
 
-    // --- CHANGE STATUS ---
     async function handleChangeStatus(property: PropertyData, newStatus: PropertyStatus) {
         if (property.status === newStatus) return;
 
@@ -58,13 +62,13 @@
             let updatedProperty: PropertyData;
 
             if (newStatus === 'PUBLISHED') {
-                updatedProperty = await propertyApi.publishProperty(property.id);
+                updatedProperty = await propertyApi.publishProperty(property.id); // set status to PUBLISHED
             } else if (newStatus === 'DRAFT') {
-                updatedProperty = await propertyApi.unpublishProperty(property.id);
+                updatedProperty = await propertyApi.unpublishProperty(property.id); // set status to DRAFT
             } else if (newStatus === 'INACTIVE') {
-                updatedProperty = await propertyApi.archiveProperty(property.id);
+                updatedProperty = await propertyApi.archiveProperty(property.id); // set status to INACTIVE
             } else {
-                throw new Error('Stato non gestito');
+                throw new Error('Invalid status');
             }
 
             properties = properties.map((p) => (p.id === property.id ? updatedProperty : p));
@@ -80,6 +84,32 @@
 
 <main class="section has-background-white-bis" style="min-height: 100vh;">
     <div class="container is-max-desktop">
+
+        <div class="owner-header mb-6">
+            <div class="owner-header-left">
+                <div class="owner-badge shadow-sm">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div>
+                    <h1 class="owner-title">Owner Dashboard</h1>
+                    <p class="owner-subtitle">Manage your properties</p>
+                </div>
+            </div>
+
+            <div class="owner-header-right">
+                <div class="owner-user is-hidden-mobile">
+                    <span class="icon is-small has-text-grey-light mr-1"><i class="fas fa-user-circle"></i></span>
+                    <span class="has-text-weight-medium">{auth.user?.email}</span>
+                </div>
+
+                <button class="button is-small is-light is-danger is-outlined ml-4" onclick={handleLogout}>
+                    <span class="icon is-small"><i class="fas fa-sign-out-alt"></i></span>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+
+
         <div class="level mb-6">
             <div class="level-left">
                 <div>
@@ -89,10 +119,11 @@
             </div>
             <div class="level-right">
                 <button
-                    class="button is-primary is-medium has-text-weight-bold is-rounded"
+                    class="button is-primary is-medium has-text-weight-bold is-rounded shadow-sm"
                     onclick={() => goto('/owner/add-property')}
                 >
-                    + Add New Property
+                    <span class="icon is-small"><i class="fas fa-plus"></i></span>
+                    <span>Add New Property</span>
                 </button>
             </div>
         </div>
@@ -248,13 +279,14 @@
 
 <style>
     .shadow-soft {
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05) !important;
-        border: none; 
-    }
-
-    .table-container-framed {
-        border: 2px solid #363636; 
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
+        border: none;
         border-radius: 8px;
+    }
+    
+    .table-container-framed {
+        border: 1px solid #dbdbdb; 
+        border-radius: 5px;
         overflow: hidden; 
     }
 
@@ -264,4 +296,63 @@
     :global(.title) {
         color: #000 !important;
     }
+
+
+    .owner-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 3rem;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+    }
+
+    .owner-header-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .owner-badge {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #3273dc, #2759a5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+    }
+
+    .owner-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0;
+        color: #111;
+    }
+
+    .owner-subtitle {
+        font-size: 0.8rem;
+        color: #777;
+        margin-top: 0.1rem;
+    }
+
+    .owner-header-right {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .owner-user {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.8rem;
+        color: #666;
+    }
+
+
 </style>
