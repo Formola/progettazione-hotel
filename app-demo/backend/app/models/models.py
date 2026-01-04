@@ -121,6 +121,8 @@ class RoomModel(Base):
 
     # Relazioni
     property = relationship("PropertyModel", back_populates="rooms")
+    
+    # se una stanza viene cancellata, i media associati devono essere cancellati
     media = relationship("MediaModel", back_populates="room", cascade="all, delete-orphan")
     
     # MODIFICA IMPORTANTE: Relazione verso il LINK

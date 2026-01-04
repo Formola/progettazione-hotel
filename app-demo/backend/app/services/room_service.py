@@ -141,8 +141,16 @@ class RoomService:
         return self.room_repo.save(room)
     
     # intendiamo creazione di una nuova amenity e collegamento alla stanza
-    def add_new_amenity(self, room_id: str, data: NewAmenityInput):
+    def add_new_amenity(self, room_id: str, data: NewAmenityInput, owner: entities.User):
         room = self.room_repo.get_by_id(room_id)
+        
+        # check if owner owns the property
+        if not room:
+            raise HTTPException(status_code=404, detail="Room not found")
+        
+        prop = self.property_repo.get_by_id(room.property_id)
+        if not prop or not prop.is_owned_by(owner.id):
+            raise HTTPException(status_code=403, detail="Not authorized")
 
         # CERCA SE ESISTE GIÀ (Case insensitive per sicurezza)
         existing_amenity = self.amenity_repo.get_by_name(data.name)

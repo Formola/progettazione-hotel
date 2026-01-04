@@ -1,4 +1,5 @@
 from typing import Optional, List
+from sqlalchemy import delete, exists
 from sqlalchemy.orm import Session
 
 from app.domain import entities
@@ -91,8 +92,34 @@ class RoomRepository:
     def delete(self, room_id: str):
         model = self.db.query(models.RoomModel).get(room_id)
         if model:
+            # Identifichiamo le custom amenities candidate alla pulizia
+            linked_amenity_ids = [
+                link.amenity_id 
+                for link in model.amenity_links 
+                if not link.amenity.is_global
+            ]
+
+            # Delete stanza (cascade sui link)
             self.db.delete(model)
+            self.db.flush()
+
+            # 3. Clean up orfani
+            if linked_amenity_ids:
+                stmt = (
+                    delete(models.RoomAmenityModel)
+                    .where(models.RoomAmenityModel.id.in_(linked_amenity_ids))
+                    .where(models.RoomAmenityModel.is_global == False)
+                    .where(
+                        ~exists().where(
+                            models.RoomAmenityLinkModel.amenity_id == models.RoomAmenityModel.id
+                        )
+                    )
+                )
+                self.db.execute(stmt)
+
             self.db.commit()
+            
+        # print("deleted amenities:", linked_amenity_ids)
 
     # =================================================================
     # HELPER PRIVATI DI SINCRONIZZAZIONE
@@ -112,22 +139,58 @@ class RoomRepository:
         """
         # Clear the current list of links (it will be recreated)
         # Note: thanks to cascade="all, delete-orphan", removing from the list deletes from the DB
+        
+        # FASE SNAPSHOT: Capiamo cosa stiamo per rimuovere
+        # ID attualmente collegati a questa stanza nel DB
+        current_linked_ids = {link.amenity_id for link in model.amenity_links}
+        # ID che l'utente vuole salvare (dal frontend)
+        incoming_ids = {entity.id for entity in room_amenity_entities}
+        
+        # Calcoliamo la differenza: ID che c'erano prima ma ora non ci sono più
+        ids_to_unlink = current_linked_ids - incoming_ids
+
+        # FASE UPDATE LINKS (Standard)
+        # Svuotiamo la lista (SQLAlchemy cancellerà le righe nella tabella 'room_amenity_link')
         model.amenity_links = [] 
 
-        if not room_amenity_entities:
-            return
+        if room_amenity_entities:
+            new_links = []
+            for am_entity in room_amenity_entities:
+                link = models.RoomAmenityLinkModel(
+                    room_id=model.id,
+                    amenity_id=am_entity.id,
+                    custom_description=am_entity.custom_description
+                )
+                new_links.append(link)
+            model.amenity_links = new_links
 
-        new_links = []
-        for am_entity in room_amenity_entities:
-            # Creiamo il Link Model esplicitamente
-            link = models.RoomAmenityLinkModel(
-                room_id=model.id,
-                amenity_id=am_entity.id,
-                custom_description=am_entity.custom_description
+        # IMPORTANTE: Facciamo un flush per applicare le modifiche ai LINK nel DB
+        # Prima di provare a cancellare l'amenity padre, i link figli devono essere spariti.
+        self.db.flush()
+
+        # FASE CLEANUP (Garbage Collection)
+        # Se abbiamo rimosso dei collegamenti, controlliamo se le amenity "genitore" sono diventate orfane
+        if ids_to_unlink:
+            # Query di cancellazione sicura:
+            # DELETE FROM room_amenities 
+            # WHERE id IN (ids_to_unlink) 
+            #   AND is_global = FALSE 
+            #   AND NOT EXISTS (SELECT 1 FROM room_amenity_links WHERE amenity_id = room_amenities.id)
+            
+            stmt = (
+                delete(models.RoomAmenityModel)
+                .where(models.RoomAmenityModel.id.in_(ids_to_unlink)) # Solo quelle che abbiamo appena sganciato
+                .where(models.RoomAmenityModel.is_global == False)    # MAI cancellare quelle del catalogo
+                .where(
+                    ~exists().where(
+                        models.RoomAmenityLinkModel.amenity_id == models.RoomAmenityModel.id
+                    )
+                )
             )
-            new_links.append(link)
-        
-        model.amenity_links = new_links
+            
+            self.db.execute(stmt)
+            
+        # print("eliminated orphaned amenities:", ids_to_unlink)
 
     def _sync_media(self, model: models.RoomModel, media_entities: List[entities.Media]):
         """

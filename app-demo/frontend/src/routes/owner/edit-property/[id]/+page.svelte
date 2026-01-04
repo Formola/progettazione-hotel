@@ -23,6 +23,7 @@
 
     const propertyId = $page.params.id ?? '';
 
+    // --- STATE ---
     let activeTab = $state<'general' | 'amenities' | 'rooms' | 'photos'>('general');
     let isLoading = $state(true);
     let isSaving = $state(false);
@@ -34,6 +35,10 @@
     let propertyAmenityCatalog = $state<PropertyAmenity[]>([]); 
     let roomAmenityCatalog = $state<RoomAmenity[]>([]); 
     let existingCustomAmenities = $state<PropertyAmenity[]>([]); 
+    
+    // Per Edit Room: tracciamo le amenity custom SPECIFICHE della stanza
+    let currentRoomCustomAmenities = $state<RoomAmenity[]>([]); 
+
     let rooms = $state<RoomData[]>([]);
 
     // Form Update Property
@@ -42,7 +47,7 @@
         amenities: [], new_amenities: [], media_ids: []
     });
 
-    // Form Room (Create & Edit)
+    // Form Room
     let isRoomModalOpen = $state(false);
     let editingRoomId = $state<string | null>(null);
     
@@ -51,7 +56,7 @@
         amenities: [], new_amenities: [], media_ids: [] 
     });
 
-    // Temp Inputs per nuove amenities
+    // Temp Inputs
     let tempNewAmenity = $state<NewAmenityInput>({
         name: '', category: AMENITY_CATEGORIES[0], description: ''
     });
@@ -111,12 +116,7 @@
         existingCustomAmenities = prop.amenities.filter(a => !catalogIds.has(a.id));
     }
 
-    // --- HELPER CHIPS ---
-    function getAmenityDesc(amenity: any): string | null {
-        return amenity.custom_description || amenity.description || null;
-    }
-
-    // --- PROPERTY AMENITIES LOGIC ---
+    // --- PROPERTY LOGIC ---
     function isPropAmenitySelected(id: string) { return formData.amenities.some(a => a.id === id); }
     
     function togglePropAmenity(id: string) {
@@ -155,14 +155,21 @@
         formData.new_amenities = formData.new_amenities?.filter((_, i) => i !== index);
     }
 
+    // --- ROOMS LOGIC ---
     function openAddRoomModal() {
         editingRoomId = null;
+        currentRoomCustomAmenities = [];
         newRoomData = { type: 'DOUBLE', price: 100, capacity: 2, description: '', amenities: [], new_amenities: [], media_ids: [] };
         isRoomModalOpen = true;
     }
 
     function openEditRoomModal(room: RoomData) {
         editingRoomId = room.id;
+        
+        // Calcola amenities custom della stanza corrente per visualizzarle
+        const catalogIds = new Set(roomAmenityCatalog.map(a => a.id));
+        currentRoomCustomAmenities = room.amenities.filter(a => !catalogIds.has(a.id));
+
         newRoomData = {
             type: room.type,
             price: room.price,
@@ -192,20 +199,83 @@
         if(newRoomData.new_amenities) newRoomData.new_amenities = newRoomData.new_amenities.filter((_, i) => i !== index);
     }
 
+    function getAmenityDesc(amenity: RoomAmenity | PropertyAmenity): string | null {
+        return amenity.custom_description && amenity.custom_description.trim() !== '' ? amenity.custom_description : null;
+    }
+
+    // === GESTIONE ATOMICITÀ E ROLLBACK ===
     async function saveRoom() {
         try {
             isSaving = true;
+            
             if (editingRoomId) {
-                const updated = await roomApi.updateRoom(editingRoomId, newRoomData);
-                rooms = rooms.map(r => r.id === editingRoomId ? updated : r);
-                successMessage = "Room updated successfully";
+                // --- UPDATE FLOW ---
+                
+                // SNAPSHOT per Rollback: Troviamo lo stato attuale della stanza
+                const originalRoom = rooms.find(r => r.id === editingRoomId);
+                const newlyCreatedAmenityIds: string[] = []; // Traccia amenities create in questo ciclo
+
+                try {
+                    // Aggiornamento Base (Dati + Link Amenities esistenti)
+                    let updated = await roomApi.updateRoom(editingRoomId, newRoomData);
+
+                    // Creazione Nuove Custom Amenities (Loop)
+                    if (newRoomData.new_amenities && newRoomData.new_amenities.length > 0) {
+                        for (const newAm of newRoomData.new_amenities) {
+                            const prevAmenities = updated.amenities; // Stato prima dell'aggiunta
+                            updated = await roomApi.addAmenityToRoom(editingRoomId, newAm);
+                            
+                            // Troviamo l'ID della nuova amenity per eventuale rollback
+                            // È l'ID che è in 'updated' ma non era in 'prevAmenities'
+                            const newId = updated.amenities.find(a => !prevAmenities.some(p => p.id === a.id))?.id;
+                            if (newId) newlyCreatedAmenityIds.push(newId);
+                        }
+                    }
+
+                    // Se tutto ok, aggiorno la UI
+                    rooms = rooms.map(r => r.id === editingRoomId ? updated : r);
+                    successMessage = "Room updated successfully";
+                    isRoomModalOpen = false;
+
+                } catch (innerError) {
+                    console.error("Update sequence failed. Rolling back...", innerError);
+                    
+                    // --- ROLLBACK PROCEDURE ---
+                    
+                    // Elimina le amenities create parzialmente
+                    if (newlyCreatedAmenityIds.length > 0) {
+                        await Promise.all(newlyCreatedAmenityIds.map(id => 
+                            roomApi.removeAmenityFromRoom(editingRoomId!, id).catch(e => console.error("Rollback cleanup failed", e))
+                        ));
+                    }
+
+                    // Ripristina i dati base della stanza (Se updateRoom era passato ma il loop no)
+                    if (originalRoom) {
+                        const revertData: RoomInput = {
+                            type: originalRoom.type,
+                            price: originalRoom.price,
+                            capacity: originalRoom.capacity,
+                            description: originalRoom.description || '',
+                            amenities: originalRoom.amenities.map(a => ({ id: a.id, custom_description: a.custom_description || '' })),
+                            new_amenities: [], // Non ricreiamo nulla nel rollback
+                            media_ids: originalRoom.media.map(m => m.id)
+                        };
+                        await roomApi.updateRoom(editingRoomId, revertData);
+                    }
+
+                    throw new Error("Update failed and changes were reverted.");
+                }
+
             } else {
+                // CREATE FLOW (Atomico lato Backend di solito, ma gestiamo errori base) ---
                 const created = await propertyApi.addRoomToProperty(propertyId, newRoomData);
                 rooms = [...rooms, created];
                 successMessage = "Room created successfully";
+                isRoomModalOpen = false;
             }
-            isRoomModalOpen = false;
+
             setTimeout(() => successMessage = null, 3000);
+
         } catch (e: any) {
             console.error(e);
             alert('Error saving room: ' + (e.message || e));
@@ -222,6 +292,7 @@
         } catch(e) { console.error(e); alert("Failed to delete room"); }
     }
 
+    // --- PHOTOS LOGIC ---
     function handleFileSelect(event: Event) {
         const input = event.target as HTMLInputElement;
         if (input.files) {
@@ -234,7 +305,7 @@
             });
         }
     }
-
+    
     async function uploadNewPhotos() {
         if (newFiles.length === 0) return;
         let uploadedMediaIds: string[] = [];
@@ -260,11 +331,10 @@
             setTimeout(() => successMessage = null, 3000);
         } catch (e) {
             console.error(e);
-            error = 'Failed to upload photos. Reverting changes...';
+            error = 'Failed to upload photos. Reverting...';
+            // Rollback per le foto
             if (uploadedMediaIds.length > 0) {
-                try {
-                    await Promise.all(uploadedMediaIds.map(id => mediaApi.deleteMedia(id)));
-                } catch (cleanupError) { console.error(cleanupError); }
+                try { await Promise.all(uploadedMediaIds.map(id => mediaApi.deleteMedia(id))); } catch (ex) { console.error(ex); }
             }
         } finally {
             isSaving = false;
@@ -289,7 +359,7 @@
                     <span class="icon is-small"><i class="fas fa-arrow-left"></i></span>
                     <span class="has-text-weight-medium">Back to Dashboard</span>
                 </button>
-                <h1 class="title is-2 has-text-black has-text-weight-bold mt-2">Edit Property "{property?.name}"</h1>
+                <h1 class="title is-2 has-text-black has-text-weight-bold mt-2">Edit Property</h1>
             </div>
             {#if property}
                 <div class="tags has-addons">
@@ -397,9 +467,7 @@
                                         <div class="field mb-3 p-3 has-background-white border-light shadow-sm" style="border-radius: 6px;">
                                             <label class="checkbox is-flex is-align-items-center mb-2">
                                                 <input type="checkbox" checked={isPropAmenitySelected(amenity.id)} onchange={() => togglePropAmenity(amenity.id)} class="mr-2" style="transform: scale(1.2);">
-                                                <span class="icon is-small has-text-grey mr-2">
-                                                    <i class="fas {getAmenityIcon(amenity.name, amenity.category, 'property')}"></i>
-                                                </span>
+                                                <span class="icon is-small has-text-grey mr-2"><i class="fas {getAmenityIcon(amenity.name, amenity.category, 'property')}"></i></span>
                                                 <span class="has-text-grey-darker has-text-weight-bold">{amenity.name}</span>
                                             </label>
                                             {#if isPropAmenitySelected(amenity.id)}
@@ -421,9 +489,7 @@
                                             <div class="field mb-3 p-3 has-background-white border-light shadow-sm" style="border-radius: 6px;">
                                                 <label class="checkbox is-flex is-align-items-center mb-2">
                                                     <input type="checkbox" checked={isPropAmenitySelected(amenity.id)} onchange={() => togglePropAmenity(amenity.id)} class="mr-2" style="transform: scale(1.2);">
-                                                    <span class="icon is-small has-text-grey mr-2">
-                                                        <i class="fas {getAmenityIcon(amenity.name, amenity.category, 'property')}"></i>
-                                                    </span>
+                                                    <span class="icon is-small has-text-grey mr-2"><i class="fas {getAmenityIcon(amenity.name, amenity.category, 'property')}"></i></span>
                                                     <span class="has-text-black has-text-weight-bold">{amenity.name}</span>
                                                     <span class="tag is-info is-light is-rounded is-small ml-2">Custom</span>
                                                 </label>
@@ -439,34 +505,12 @@
                                 {/if}
                                 <div class="box has-background-white border-light shadow-sm p-5">
                                     <h6 class="heading has-text-grey-dark mb-3 has-text-weight-bold">Create New Service</h6>
-                                    
-                                    <div class="field">
-                                        <label class="label is-small has-text-black" for="customAmenityName">Name</label>
-                                        <input id="customAmenityName" class="input has-text-black has-background-white mb-2" type="text" placeholder="e.g. Helipad" bind:value={tempNewAmenity.name} />
-                                    </div>
-                                    <div class="field">
-                                        <label class="label is-small has-text-black" for="customAmenityCategory">Category</label>
-                                        <div class="select is-fullwidth mb-2">
-                                            <select id="customAmenityCategory" class="has-text-black has-background-white" bind:value={tempNewAmenity.category}>
-                                                {#each AMENITY_CATEGORIES as category}<option value={category}>{category}</option>{/each}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="field">
-                                        <label class="label is-small has-text-black" for="customAmenityDesc">Description</label>
-                                        <input id="customAmenityDesc" class="input has-text-black has-background-white mb-4" type="text" placeholder="Details" bind:value={tempNewAmenity.description} />
-                                    </div>
-                                    
-                                    <button class="button is-info has-text-weight-bold is-fullwidth shadow-sm" onclick={addCustomAmenityToForm} disabled={!tempNewAmenity.name}>
-                                        <span class="icon is-small"><i class="fas fa-plus"></i></span>
-                                        <span>Add to List</span>
-                                    </button>
+                                    <div class="field"><label class="label is-small has-text-black" for="custAmName">Name</label><input id="custAmName" class="input has-text-black has-background-white mb-2" type="text" placeholder="e.g. Helipad" bind:value={tempNewAmenity.name} /></div>
+                                    <div class="field"><label class="label is-small has-text-black" for="custAmCat">Category</label><div class="select is-fullwidth mb-2"><select id="custAmCat" class="has-text-black has-background-white" bind:value={tempNewAmenity.category}>{#each AMENITY_CATEGORIES as category}<option value={category}>{category}</option>{/each}</select></div></div>
+                                    <div class="field"><label class="label is-small has-text-black" for="custAmDesc">Description</label><input id="custAmDesc" class="input has-text-black has-background-white mb-4" type="text" placeholder="Details" bind:value={tempNewAmenity.description} /></div>
+                                    <button class="button is-info has-text-weight-bold is-fullwidth shadow-sm" onclick={addCustomAmenityToForm} disabled={!tempNewAmenity.name}><span class="icon is-small"><i class="fas fa-plus"></i></span><span>Add to List</span></button>
                                     {#if formData.new_amenities && formData.new_amenities.length > 0}
-                                        <div class="tags mt-4">
-                                            {#each formData.new_amenities as item, i}
-                                                <span class="tag is-info is-medium">{item.name}<button aria-label="remove-{item.name}" class="delete is-small" onclick={() => removeCustomAmenityFromForm(i)}></button></span>
-                                            {/each}
-                                        </div>
+                                        <div class="tags mt-4">{#each formData.new_amenities as item, i}<span class="tag is-info is-medium">{item.name}<button aria-label="remove-{item.name}" class="delete is-small" onclick={() => removeCustomAmenityFromForm(i)}></button></span>{/each}</div>
                                     {/if}
                                 </div>
                             </div>
@@ -479,19 +523,10 @@
                     <div class="animate-fade">
                         <div class="level">
                             <div class="level-left">
-                                <div>
-                                    <h3 class="title is-5 has-text-black">Manage Rooms</h3>
-                                    <p class="subtitle is-6 has-text-grey-dark">Add or remove rooms.</p>
-                                </div>
+                                <div><h3 class="title is-5 has-text-black">Manage Rooms</h3><p class="subtitle is-6 has-text-grey-dark">Add or remove rooms.</p></div>
                             </div>
-                            <div class="level-right">
-                                <button class="button is-info shadow-sm has-text-weight-bold" onclick={openAddRoomModal}>
-                                    <span class="icon"><i class="fas fa-plus"></i></span>
-                                    <span>Add Room</span>
-                                </button>
-                            </div>
+                            <div class="level-right"><button class="button is-info shadow-sm has-text-weight-bold" onclick={openAddRoomModal}><span class="icon"><i class="fas fa-plus"></i></span><span>Add Room</span></button></div>
                         </div>
-
                         {#if rooms.length === 0}
                             <div class="notification is-light has-text-centered border-light"><p class="has-text-grey-dark">No rooms added yet.</p></div>
                         {:else}
@@ -506,12 +541,10 @@
                                                 </div>
                                                 <div class="mb-2">
                                                     <span class="icon-text has-text-grey-darker mr-4 is-flex is-align-items-center">
-                                                        <span class="icon is-small"><i class="fas fa-user-friends"></i></span>
-                                                        <span>Capacity: {room.capacity}</span>
+                                                        <span class="icon is-small"><i class="fas fa-user-friends"></i></span><span>Capacity: {room.capacity}</span>
                                                     </span>
                                                 </div>
                                                 <p class="is-size-7 has-text-grey-dark">{room.description || 'No description provided.'}</p>
-                                                
                                                 {#if room.amenities && room.amenities.length > 0}
                                                     <div class="amenities-grid mt-3">
                                                         {#each room.amenities as amenity}
@@ -519,25 +552,16 @@
                                                             <div class="amenity-chip {desc ? 'has-tooltip' : ''}">
                                                                 <i class="fas {getAmenityIcon(amenity.name, amenity.category, 'room')} amenity-icon"></i>
                                                                 <span>{amenity.name}</span>
-                                                                {#if desc}
-                                                                    <div class="tooltip-content">{desc}</div>
-                                                                {/if}
+                                                                {#if desc}<div class="tooltip-content">{desc}</div>{/if}
                                                             </div>
                                                         {/each}
                                                     </div>
                                                 {/if}
                                             </div>
-                                            
                                             <div class="column is-3 has-text-right">
                                                 <div class="buttons is-right">
-                                                    <button class="button is-small is-info is-light" onclick={() => openEditRoomModal(room)}>
-                                                        <span class="icon"><i class="fas fa-edit"></i></span>
-                                                        <span>Edit</span>
-                                                    </button>
-                                                    <button class="button is-small is-danger is-light" onclick={() => deleteRoom(room.id)}>
-                                                        <span class="icon"><i class="fas fa-trash"></i></span>
-                                                        <span>Delete</span>
-                                                    </button>
+                                                    <button class="button is-small is-info is-light" onclick={() => openEditRoomModal(room)}><span class="icon"><i class="fas fa-edit"></i></span><span>Edit</span></button>
+                                                    <button class="button is-small is-danger is-light" onclick={() => deleteRoom(room.id)}><span class="icon"><i class="fas fa-trash"></i></span><span>Delete</span></button>
                                                 </div>
                                             </div>
                                         </div>
@@ -554,16 +578,8 @@
                             {#each property.media as media}
                                 <div class="column is-3-desktop is-6-mobile">
                                     <div class="card shadow-sm border-light">
-                                        <div class="card-image">
-                                            <figure class="image is-4by3">
-                                                {#if media.file_type?.toUpperCase().includes('VIDEO')}
-                                                    <video src={media.storage_path} class="has-ratio" controls><track kind="captions"></video>
-                                                {:else}
-                                                    <img src={media.storage_path} alt="Property" style="object-fit:cover; border-radius: 4px 4px 0 0;">
-                                                {/if}
-                                            </figure>
-                                        </div>
-                                        <button class="delete is-medium" style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6);" onclick={() => deletePhoto(media.id)} aria-label="Delete photo"></button>
+                                        <div class="card-image"><figure class="image is-4by3"><img src={media.storage_path} alt="Property" style="object-fit:cover; border-radius: 4px 4px 0 0;"></figure></div>
+                                        <button class="delete is-medium" style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6);" onclick={() => deletePhoto(media.id)} aria-label="Delete"></button>
                                     </div>
                                 </div>
                             {/each}
@@ -572,7 +588,7 @@
                         <h3 class="title is-5 has-text-black mb-4">Upload New Photos</h3>
                         <div class="file is-boxed is-primary is-centered has-text-centered mb-5">
                             <label class="file-label" style="width: 100%;">
-                                <input class="file-input" type="file" multiple accept="image/png, image/jpeg, image/webp, video/mp4" onchange={handleFileSelect} />
+                                <input class="file-input" type="file" multiple accept="image/*" onchange={handleFileSelect} />
                                 <span class="file-cta p-5 has-background-white-ter" style="border: 2px dashed #b5b5b5; border-radius: 8px;">
                                     <span class="file-icon is-size-2 has-text-primary"><i class="fas fa-cloud-upload-alt"></i></span>
                                     <span class="file-label mt-2 has-text-grey-darker is-size-5 has-text-weight-semibold">Click to select new photos</span>
@@ -580,11 +596,7 @@
                             </label>
                         </div>
                         {#if newPreviews.length > 0}
-                            <div class="columns is-multiline is-mobile mb-4">
-                                {#each newPreviews as src}
-                                    <div class="column is-2"><figure class="image is-1by1 shadow-sm"><img {src} alt="Preview" style="object-fit:cover; border-radius:4px"></figure></div>
-                                {/each}
-                            </div>
+                            <div class="columns is-multiline is-mobile mb-4">{#each newPreviews as src}<div class="column is-2"><figure class="image is-1by1 shadow-sm"><img {src} alt="Preview" style="object-fit:cover; border-radius:4px"></figure></div>{/each}</div>
                             <div class="has-text-centered"><button class="button is-primary has-text-weight-bold shadow-sm {isSaving ? 'is-loading' : ''}" onclick={uploadNewPhotos}>Upload {newFiles.length} Files</button></div>
                         {/if}
                     </div>
@@ -604,27 +616,39 @@
                 <div class="columns">
                     <div class="column is-5">
                         <h6 class="heading has-text-grey-dark mb-3 has-text-weight-bold">Details</h6>
-                        <div class="field"><label class="label is-small has-text-black" for="roomType">Type</label><div class="select is-fullwidth"><select id="roomType" class="has-text-black has-background-white" bind:value={newRoomData.type}><option value="SINGLE">Single</option><option value="DOUBLE">Double</option><option value="SUITE">Suite</option></select></div></div>
-                        <div class="columns is-mobile"><div class="column"><div class="field"><label class="label is-small has-text-black" for="roomPrice">Price (€)</label><input id="roomPrice" class="input has-text-black has-background-white" type="number" bind:value={newRoomData.price} min="0" /></div></div><div class="column"><div class="field"><label class="label is-small has-text-black" for="roomCap">Capacity</label><input id="roomCap" class="input has-text-black has-background-white" type="number" bind:value={newRoomData.capacity} min="1" /></div></div></div>
-                        <div class="field"><label class="label is-small has-text-black" for="roomDesc">Description</label><textarea id="roomDesc" class="textarea has-text-black has-background-white" rows="4" bind:value={newRoomData.description}></textarea></div>
+                        <div class="field"><label class="label is-small has-text-black" for="rType">Type</label><div class="select is-fullwidth"><select id="rType" class="has-text-black has-background-white" bind:value={newRoomData.type}><option value="SINGLE">Single</option><option value="DOUBLE">Double</option><option value="SUITE">Suite</option></select></div></div>
+                        <div class="columns is-mobile"><div class="column"><div class="field"><label class="label is-small has-text-black" for="rPrice">Price (€)</label><input id="rPrice" class="input has-text-black has-background-white" type="number" bind:value={newRoomData.price} min="0" /></div></div><div class="column"><div class="field"><label class="label is-small has-text-black" for="rCap">Capacity</label><input id="rCap" class="input has-text-black has-background-white" type="number" bind:value={newRoomData.capacity} min="1" /></div></div></div>
+                        <div class="field"><label class="label is-small has-text-black" for="rDesc">Description</label><textarea id="rDesc" class="textarea has-text-black has-background-white" rows="4" bind:value={newRoomData.description}></textarea></div>
                     </div>
                     
                     <div class="column is-7" style="border-left: 1px solid #f0f0f0;">
                         <h6 class="heading has-text-grey-dark mb-3 has-text-weight-bold">Room Amenities</h6>
-                        
                         <div class="box has-background-white-ter is-shadowless border-light p-3 mb-4" style="max-height: 250px; overflow-y: auto;">
-                            {#if roomAmenityCatalog.length === 0}
-                                <p class="is-size-7 has-text-grey">No room amenities loaded.</p>
-                            {:else}
-                                {#each roomAmenityCatalog as ra}
+                            {#each roomAmenityCatalog as ra}
+                                <div class="field mb-2 p-2 has-background-white border-light" style="border-radius: 4px;">
+                                    <label class="checkbox is-flex is-align-items-center">
+                                        <input type="checkbox" checked={isRoomAmenitySelected(ra.id)} onchange={() => toggleRoomAmenity(ra.id)} class="mr-2">
+                                        <span class="icon is-small has-text-grey mr-2"><i class="fas {getAmenityIcon(ra.name, ra.category, 'room')}"></i></span>
+                                        <span class="is-size-7 has-text-weight-bold has-text-black">{ra.name}</span>
+                                    </label>
+                                    {#if isRoomAmenitySelected(ra.id)}
+                                        {@const idx = newRoomData.amenities.findIndex(a => a.id === ra.id)}
+                                        <input class="input is-small mt-1 has-text-black has-background-white" type="text" placeholder="Details" bind:value={newRoomData.amenities[idx].custom_description} />
+                                    {/if}
+                                </div>
+                            {/each}
+                        </div>
+
+                        {#if currentRoomCustomAmenities.length > 0}
+                            <div class="box has-background-white-ter is-shadowless border-light p-3 mb-4">
+                                <h6 class="heading has-text-grey-dark is-size-7 has-text-weight-bold mb-2">Active Custom Services</h6>
+                                {#each currentRoomCustomAmenities as ra}
                                     <div class="field mb-2 p-2 has-background-white border-light" style="border-radius: 4px;">
                                         <label class="checkbox is-flex is-align-items-center">
                                             <input type="checkbox" checked={isRoomAmenitySelected(ra.id)} onchange={() => toggleRoomAmenity(ra.id)} class="mr-2">
-                                            
-                                            <span class="icon is-small has-text-grey mr-2">
-                                                <i class="fas {getAmenityIcon(ra.name, ra.category, 'room')}"></i>
-                                            </span>
+                                            <span class="icon is-small has-text-grey mr-2"><i class="fas {getAmenityIcon(ra.name, ra.category, 'room')}"></i></span>
                                             <span class="is-size-7 has-text-weight-bold has-text-black">{ra.name}</span>
+                                            <span class="tag is-info is-light is-rounded is-small ml-2" style="font-size: 0.65rem;">Custom</span>
                                         </label>
                                         {#if isRoomAmenitySelected(ra.id)}
                                             {@const idx = newRoomData.amenities.findIndex(a => a.id === ra.id)}
@@ -632,52 +656,28 @@
                                         {/if}
                                     </div>
                                 {/each}
-                            {/if}
-                        </div>
+                            </div>
+                        {/if}
 
                         <div class="box has-background-white border-light shadow-sm p-3">
                             <p class="is-size-7 has-text-weight-bold mb-2 has-text-black">Create Custom Room Amenity</p>
                             <div class="field is-grouped">
-                                <div class="control is-expanded">
-                                    <input class="input is-small has-text-black has-background-white" type="text" placeholder="Name (e.g. Jacuzzi)" bind:value={tempNewRoomAmenity.name} aria-label="Custom Room Amenity Name">
-                                </div>
-                                <div class="control">
-                                    <div class="select is-small">
-                                        <select class="has-text-black has-background-white" bind:value={tempNewRoomAmenity.category} aria-label="Custom Room Amenity Category">
-                                            {#each AMENITY_CATEGORIES as category}
-                                                <option value={category}>{category}</option>
-                                            {/each}
-                                        </select>
-                                    </div>
-                                </div>
+                                <div class="control is-expanded"><input class="input is-small has-text-black has-background-white" type="text" placeholder="Name" bind:value={tempNewRoomAmenity.name} aria-label="Name"></div>
+                                <div class="control"><div class="select is-small"><select class="has-text-black has-background-white" bind:value={tempNewRoomAmenity.category} aria-label="Cat">{#each AMENITY_CATEGORIES as category}<option value={category}>{category}</option>{/each}</select></div></div>
                             </div>
                             <div class="field has-addons">
-                                <div class="control is-expanded">
-                                    <input class="input is-small has-text-black has-background-white" type="text" placeholder="Details" bind:value={tempNewRoomAmenity.description} aria-label="Custom Room Amenity Description">
-                                </div>
-                                <div class="control">
-                                    <button class="button is-small is-info has-text-weight-bold" onclick={addCustomAmenityToRoom} disabled={!tempNewRoomAmenity.name}>
-                                        Add
-                                    </button>
-                                </div>
+                                <div class="control is-expanded"><input class="input is-small has-text-black has-background-white" type="text" placeholder="Details" bind:value={tempNewRoomAmenity.description} aria-label="Desc"></div>
+                                <div class="control"><button class="button is-small is-info has-text-weight-bold" onclick={addCustomAmenityToRoom} disabled={!tempNewRoomAmenity.name}>Add</button></div>
                             </div>
-
                             {#if newRoomData.new_amenities && newRoomData.new_amenities.length > 0}
-                                <div class="tags mt-2">
-                                    {#each newRoomData.new_amenities as item, i}
-                                        <span class="tag is-info is-light">
-                                            {item.name}
-                                            <button aria-label="remove-{item.name}" class="delete is-small" onclick={() => removeCustomAmenityFromRoom(i)}></button>
-                                        </span>
-                                    {/each}
-                                </div>
+                                <div class="tags mt-2">{#each newRoomData.new_amenities as item, i}<span class="tag is-info is-light">{item.name}<button class="delete is-small" onclick={() => removeCustomAmenityFromRoom(i)} aria-label="remove"></button></span>{/each}</div>
                             {/if}
                         </div>
                     </div>
                 </div>
             </section>
             <footer class="modal-card-foot has-background-white-ter border-light" style="justify-content: flex-end;">
-                <button class="button" onclick={() => isRoomModalOpen = false}>Cancel</button>
+                <button class="button has-text-grey-darker" onclick={() => isRoomModalOpen = false}>Cancel</button>
                 <button class="button is-success has-text-weight-bold shadow-sm {isSaving ? 'is-loading' : ''}" onclick={saveRoom}>{editingRoomId ? 'Update Room' : 'Save Room'}</button>
             </footer>
         </div>
@@ -690,42 +690,21 @@
     .border-light { border: 1px solid #e0e0e0 !important; }
     .animate-fade { animation: fadeIn 0.3s ease-out; }
     
-    .input, .textarea, .select select {
-        box-shadow: inset 0 1px 2px rgba(10, 10, 10, 0.1);
-        border-color: #c0c0c0;
-        color: #000 !important; 
-    }
-    .input::placeholder, .textarea::placeholder {
-        color: #7a7a7a !important;
-        opacity: 1;
-    }
-    .input:focus, .textarea:focus, .select select:focus {
-        border-color: #00d1b2;
-        box-shadow: 0 0 0 0.125em rgba(0, 209, 178, 0.25) !important;
-    }
+    .input, .textarea, .select select { box-shadow: inset 0 1px 2px rgba(10, 10, 10, 0.1); border-color: #c0c0c0; color: #000 !important; }
+    .input::placeholder, .textarea::placeholder { color: #7a7a7a !important; opacity: 1; }
+    .input:focus, .textarea:focus, .select select:focus { border-color: #00d1b2; box-shadow: 0 0 0 0.125em rgba(0, 209, 178, 0.25) !important; }
 
     .tabs.is-boxed li.is-active button { background-color: white; border-color: #e0e0e0; border-bottom-color: transparent !important; color: #00d1b2; }
     .tabs.is-boxed button { border: 1px solid transparent; border-radius: 4px 4px 0 0; color: #4a4a4a; background: transparent; text-decoration: none; }
     .tabs.is-boxed ul { border-bottom-color: #e0e0e0; }
     
-    /* AMENITY CHIPS */
     .amenities-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .amenity-chip {
-        display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.65rem;
-        background-color: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 10px;
-        font-size: 0.85rem; font-weight: 500; color: #4a5568; transition: all 0.2s ease;
-    }
+    .amenity-chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.65rem; background-color: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.85rem; font-weight: 500; color: #4a5568; transition: all 0.2s ease; }
     .amenity-icon { color: #64748b; }
     
-    /* TOOLTIP */
     .has-tooltip { position: relative; cursor: help; border-bottom: 2px dotted #cbd5e1; }
     .has-tooltip:hover { background-color: #e2e8f0; }
-    .tooltip-content {
-        visibility: hidden; opacity: 0; position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
-        background-color: #475569; color: #fff; text-align: center; padding: 8px 12px; border-radius: 6px;
-        font-size: 0.8rem; font-weight: 400; min-width: 180px; max-width: 260px; width: max-content;
-        z-index: 100; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); transition: opacity 0.2s, bottom 0.2s; pointer-events: none; white-space: normal; line-height: 1.4;
-    }
+    .tooltip-content { visibility: hidden; opacity: 0; position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%); background-color: #475569; color: #fff; text-align: center; padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 400; min-width: 180px; max-width: 260px; width: max-content; z-index: 100; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); transition: opacity 0.2s, bottom 0.2s; pointer-events: none; white-space: normal; line-height: 1.4; }
     .tooltip-content::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #475569 transparent transparent transparent; }
     .has-tooltip:hover .tooltip-content { visibility: visible; opacity: 1; bottom: 140%; }
 
