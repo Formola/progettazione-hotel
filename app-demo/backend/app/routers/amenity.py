@@ -6,6 +6,7 @@ from app.repositories.amenity_repository import PropertyAmenityRepository, RoomA
 
 router = APIRouter(prefix="/api/amenities", tags=["amenities"])
 
+# dovremmo usare un service, ma per ora sono solo letture semplici
 @router.get("/property", response_model=List[schemas.AmenityOutput])
 def get_property_amenities_catalog(
     repo: PropertyAmenityRepository = Depends(deps.get_property_amenity_repo)
