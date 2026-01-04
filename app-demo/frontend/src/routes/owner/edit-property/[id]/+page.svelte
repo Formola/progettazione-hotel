@@ -507,7 +507,7 @@
                                                 <div class="mb-2">
                                                     <span class="icon-text has-text-grey-darker mr-4 is-flex is-align-items-center">
                                                         <span class="icon is-small"><i class="fas fa-user-friends"></i></span>
-                                                        <span>Capacity: <strong>{room.capacity}</strong></span>
+                                                        <span>Capacity: {room.capacity}</span>
                                                     </span>
                                                 </div>
                                                 <p class="is-size-7 has-text-grey-dark">{room.description || 'No description provided.'}</p>
