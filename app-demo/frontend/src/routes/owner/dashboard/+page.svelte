@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { auth } from '$lib/auth.svelte';
+    import { auth } from '$lib/state/auth.svelte';
     import { propertyApi } from '$lib/api/propertyApi';
     import { goto } from '$app/navigation';
     import type { PropertyData, PropertyStatus } from '$lib/types';

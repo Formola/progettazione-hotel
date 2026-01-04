@@ -2,16 +2,20 @@
 	import { onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import type { PropertyData } from '$lib/types';
-	import { selectedProperty } from '$lib/stores/selection';
+	import { selectedProperty } from '$lib/state/selection.svelte';
 	import { getAmenityIcon } from '$lib/utils/icons';
 
-	let property = $state<PropertyData | null>(null);
+    let property = $derived(selectedProperty.value);
 
-	const unsubscribe = selectedProperty.subscribe((value) => {
-		property = value;
-	});
+    // In Svelte 5 invece di onDestroy/subscribe, usiamo un effect
+    $effect(() => {
+        if (property?.rooms) {
+             const indices: Record<string, number> = {};
+             property.rooms.forEach(r => indices[r.id] = 0);
+            roomImageIndex = indices;
+        }
+    });
 
-	onDestroy(unsubscribe);
 
 	let currentImageIndex = $state(0);
 	let carouselWidth = $state(0);

@@ -3,7 +3,7 @@
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import { fade } from 'svelte/transition';
-    import { auth } from '$lib/auth.svelte';
+    import { auth } from '$lib/state/auth.svelte';
     import { propertyApi } from '$lib/api/propertyApi';
     import { roomApi } from '$lib/api/roomApi';
     import { mediaApi } from '$lib/api/mediaApi';

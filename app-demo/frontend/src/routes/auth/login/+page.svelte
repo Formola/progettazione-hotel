@@ -4,7 +4,7 @@
     import { onMount } from 'svelte';
     
     // 🔥 USIAMO LO STORE REATTIVO, NON L'API DIRETTA
-    import { auth } from '$lib/auth.svelte';
+    import { auth } from '$lib/state/auth.svelte';
 
     let email = $state("");
     let password = $state("");

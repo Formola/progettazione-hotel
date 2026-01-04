@@ -4,7 +4,7 @@
 	import { searchApi } from '$lib/api/searchApi';
 	import type { PropertyData } from '$lib/types';
 	import PropertyCard from '$lib/components/PropertyCard.svelte';
-	import {auth} from '$lib/auth.svelte';
+	import {auth} from '$lib/state/auth.svelte';
 
 	let properties = $state<PropertyData[]>([]);
 	let isLoading = $state(true);

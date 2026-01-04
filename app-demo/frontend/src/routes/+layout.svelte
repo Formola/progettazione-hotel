@@ -1,7 +1,7 @@
 <script lang="ts">
     import favicon from '$lib/assets/favicon.svg';
     import 'bulma/css/bulma.css';
-    import { auth } from '$lib/auth.svelte';
+    import { auth } from '$lib/state/auth.svelte';
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
 	import {onMount} from 'svelte';

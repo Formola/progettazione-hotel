@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { auth } from '$lib/auth.svelte';
+	import { auth } from '$lib/state/auth.svelte';
 	import { config } from '$lib/config';
 
     console.log("🚀 [Home] Configurazione letta:", config);

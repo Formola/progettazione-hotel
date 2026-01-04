@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { auth } from '$lib/auth.svelte';
+    import { auth } from '$lib/state/auth.svelte';
     import { goto } from '$app/navigation';
     import { propertyApi } from '$lib/api/propertyApi';
     import { mediaApi } from '$lib/api/mediaApi';

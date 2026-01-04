@@ -1,6 +1,6 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
-    import { selectedProperty } from '$lib/stores/selection';
+    import { selectedProperty } from '$lib/state/selection.svelte';
     import type { MediaData, PropertyData, RoomData } from '$lib/types';
     import { getAmenityIcon } from '$lib/utils/icons';
 
