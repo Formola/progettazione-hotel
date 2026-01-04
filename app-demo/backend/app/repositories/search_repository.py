@@ -57,7 +57,7 @@ class SearchRepository:
                 WHERE property_id = ANY(:hotel_ids)
             """
             rooms = self.db.execute(text(sql_rooms), {"hotel_ids": hotel_ids}).mappings().all()
-
+            room_ids = [r["id"] for r in rooms]
             # -----------------------------
             # Media (Property + Rooms)
             # -----------------------------
@@ -67,7 +67,14 @@ class SearchRepository:
                 FROM media
                 WHERE property_id = ANY(:hotel_ids)
             """
-            media = self.db.execute(text(sql_media), {"hotel_ids": hotel_ids}).mappings().all()
+            
+            # Se ci sono stanze, aggiungiamo la condizione OR
+            params_media = {"hotel_ids": hotel_ids}
+            if room_ids:
+                sql_media += " OR room_id = ANY(:room_ids)"
+                params_media["room_ids"] = room_ids
+                
+            media = self.db.execute(text(sql_media), params_media).mappings().all()
 
             # -----------------------------
             # Property Amenities
@@ -88,7 +95,6 @@ class SearchRepository:
             # -----------------------------
             # Room Amenities
             # -----------------------------
-            room_ids = [r["id"] for r in rooms]
             r_amenities = []
             if room_ids:
                 sql_r_amenities = """

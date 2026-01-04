@@ -30,33 +30,37 @@
     let error = $state<string | null>(null);
     let successMessage = $state<string | null>(null);
 
-    // Dati
+    // Dati Property
     let property = $state<PropertyData | null>(null);
+    let rooms = $state<RoomData[]>([]);
+    
+    // Cataloghi
     let propertyAmenityCatalog = $state<PropertyAmenity[]>([]); 
     let roomAmenityCatalog = $state<RoomAmenity[]>([]); 
     let existingCustomAmenities = $state<PropertyAmenity[]>([]); 
     
-    // Per Edit Room: tracciamo le amenity custom SPECIFICHE della stanza
-    let currentRoomCustomAmenities = $state<RoomAmenity[]>([]); 
-
-    let rooms = $state<RoomData[]>([]);
-
-    // Form Update Property
+    // Form Property
     let formData = $state<PropertyInput>({
         name: '', description: '', address: '', city: '', country: '',
         amenities: [], new_amenities: [], media_ids: []
     });
 
-    // Form Room
+    // --- ROOM MODAL STATE ---
     let isRoomModalOpen = $state(false);
     let editingRoomId = $state<string | null>(null);
+    let activeRoomTab = $state<'details' | 'photos'>('details'); // STATO TAB MODALE
+    let currentRoomCustomAmenities = $state<RoomAmenity[]>([]); 
     
     let newRoomData = $state<RoomInput>({
         type: 'DOUBLE', price: 100, capacity: 2, description: '', 
         amenities: [], new_amenities: [], media_ids: [] 
     });
 
-    // Temp Inputs
+    // Media Stanza
+    let roomNewFiles = $state<File[]>([]);
+    let roomPreviews = $state<string[]>([]);
+
+    // Temp Inputs Amenities
     let tempNewAmenity = $state<NewAmenityInput>({
         name: '', category: AMENITY_CATEGORIES[0], description: ''
     });
@@ -64,10 +68,11 @@
         name: '', category: AMENITY_CATEGORIES[0], description: ''
     });
 
-    // Media
+    // Media Property
     let newFiles = $state<File[]>([]);
     let newPreviews = $state<string[]>([]);
 
+    // --- LIFECYCLE ---
     $effect(() => {
         if (!auth.isAuthenticated) goto('/');
     });
@@ -92,7 +97,7 @@
             property = prop;
             rooms = roomList;
 
-            recalcCustomAmenities(prop, propCat);
+            recalcPropertyCustomAmenities(prop, propCat);
 
             formData = {
                 name: prop.name,
@@ -111,12 +116,12 @@
         }
     }
 
-    function recalcCustomAmenities(prop: PropertyData, catalog: PropertyAmenity[]) {
+    function recalcPropertyCustomAmenities(prop: PropertyData, catalog: PropertyAmenity[]) {
         const catalogIds = new Set(catalog.map(a => a.id));
         existingCustomAmenities = prop.amenities.filter(a => !catalogIds.has(a.id));
     }
 
-    // --- PROPERTY LOGIC ---
+    // --- PROPERTY FORM LOGIC ---
     function isPropAmenitySelected(id: string) { return formData.amenities.some(a => a.id === id); }
     
     function togglePropAmenity(id: string) {
@@ -131,7 +136,7 @@
             error = null; successMessage = null;
             const updated = await propertyApi.updateProperty(propertyId, formData);
             property = updated;
-            recalcCustomAmenities(updated, propertyAmenityCatalog);
+            recalcPropertyCustomAmenities(updated, propertyAmenityCatalog);
             
             formData.amenities = updated.amenities.map(a => ({ id: a.id, custom_description: a.custom_description || '' }));
             formData.new_amenities = []; 
@@ -155,18 +160,22 @@
         formData.new_amenities = formData.new_amenities?.filter((_, i) => i !== index);
     }
 
-    // --- ROOMS LOGIC ---
+    // --- ROOMS FORM LOGIC ---
     function openAddRoomModal() {
         editingRoomId = null;
+        activeRoomTab = 'details'; // Reset Tab
         currentRoomCustomAmenities = [];
+        roomNewFiles = []; roomPreviews = [];
         newRoomData = { type: 'DOUBLE', price: 100, capacity: 2, description: '', amenities: [], new_amenities: [], media_ids: [] };
         isRoomModalOpen = true;
     }
 
     function openEditRoomModal(room: RoomData) {
         editingRoomId = room.id;
+        activeRoomTab = 'details'; // Reset Tab
+        roomNewFiles = []; roomPreviews = [];
         
-        // Calcola amenities custom della stanza corrente per visualizzarle
+        // Custom Amenities Logic
         const catalogIds = new Set(roomAmenityCatalog.map(a => a.id));
         currentRoomCustomAmenities = room.amenities.filter(a => !catalogIds.has(a.id));
 
@@ -199,81 +208,86 @@
         if(newRoomData.new_amenities) newRoomData.new_amenities = newRoomData.new_amenities.filter((_, i) => i !== index);
     }
 
-    function getAmenityDesc(amenity: RoomAmenity | PropertyAmenity): string | null {
-        return amenity.custom_description && amenity.custom_description.trim() !== '' ? amenity.custom_description : null;
+    // --- ROOM MEDIA HANDLING ---
+    function handleRoomFileSelect(event: Event) {
+        const input = event.target as HTMLInputElement;
+        if (input.files) {
+            const files = Array.from(input.files);
+            roomNewFiles = [...roomNewFiles, ...files];
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => { if (e.target?.result) roomPreviews = [...roomPreviews, e.target.result as string]; };
+                reader.readAsDataURL(file);
+            });
+        }
     }
 
-    // === GESTIONE ATOMICITÀ E ROLLBACK ===
+    function removeRoomNewFile(index: number) {
+        roomNewFiles = roomNewFiles.filter((_, i) => i !== index);
+        roomPreviews = roomPreviews.filter((_, i) => i !== index);
+    }
+
+    async function deleteRoomExistingPhoto(mediaId: string) {
+        if (!confirm("Delete this photo?")) return;
+        try {
+            await mediaApi.deleteMedia(mediaId);
+            if (editingRoomId) {
+                const rIndex = rooms.findIndex(r => r.id === editingRoomId);
+                if (rIndex >= 0) {
+                    rooms[rIndex].media = rooms[rIndex].media.filter(m => m.id !== mediaId);
+                    rooms = [...rooms]; // Trigger reattività
+                }
+            }
+        } catch (e) { console.error(e); alert("Failed to delete photo"); }
+    }
+
+    // --- SAVE ROOM ORCHESTRATION ---
     async function saveRoom() {
         try {
             isSaving = true;
-            
+            let savedRoomId: string | null = null;
+
             if (editingRoomId) {
-                // --- UPDATE FLOW ---
+                // UPDATE ROOM
+                let updated = await roomApi.updateRoom(editingRoomId, newRoomData);
                 
-                // SNAPSHOT per Rollback: Troviamo lo stato attuale della stanza
-                const originalRoom = rooms.find(r => r.id === editingRoomId);
-                const newlyCreatedAmenityIds: string[] = []; // Traccia amenities create in questo ciclo
-
-                try {
-                    // Aggiornamento Base (Dati + Link Amenities esistenti)
-                    let updated = await roomApi.updateRoom(editingRoomId, newRoomData);
-
-                    // Creazione Nuove Custom Amenities (Loop)
-                    if (newRoomData.new_amenities && newRoomData.new_amenities.length > 0) {
-                        for (const newAm of newRoomData.new_amenities) {
-                            const prevAmenities = updated.amenities; // Stato prima dell'aggiunta
-                            updated = await roomApi.addAmenityToRoom(editingRoomId, newAm);
-                            
-                            // Troviamo l'ID della nuova amenity per eventuale rollback
-                            // È l'ID che è in 'updated' ma non era in 'prevAmenities'
-                            const newId = updated.amenities.find(a => !prevAmenities.some(p => p.id === a.id))?.id;
-                            if (newId) newlyCreatedAmenityIds.push(newId);
-                        }
+                // Add Custom Amenities (Manual Loop)
+                if (newRoomData.new_amenities && newRoomData.new_amenities.length > 0) {
+                    for (const newAm of newRoomData.new_amenities) {
+                        updated = await roomApi.addAmenityToRoom(editingRoomId, newAm);
                     }
-
-                    // Se tutto ok, aggiorno la UI
-                    rooms = rooms.map(r => r.id === editingRoomId ? updated : r);
-                    successMessage = "Room updated successfully";
-                    isRoomModalOpen = false;
-
-                } catch (innerError) {
-                    console.error("Update sequence failed. Rolling back...", innerError);
-                    
-                    // --- ROLLBACK PROCEDURE ---
-                    
-                    // Elimina le amenities create parzialmente
-                    if (newlyCreatedAmenityIds.length > 0) {
-                        await Promise.all(newlyCreatedAmenityIds.map(id => 
-                            roomApi.removeAmenityFromRoom(editingRoomId!, id).catch(e => console.error("Rollback cleanup failed", e))
-                        ));
-                    }
-
-                    // Ripristina i dati base della stanza (Se updateRoom era passato ma il loop no)
-                    if (originalRoom) {
-                        const revertData: RoomInput = {
-                            type: originalRoom.type,
-                            price: originalRoom.price,
-                            capacity: originalRoom.capacity,
-                            description: originalRoom.description || '',
-                            amenities: originalRoom.amenities.map(a => ({ id: a.id, custom_description: a.custom_description || '' })),
-                            new_amenities: [], // Non ricreiamo nulla nel rollback
-                            media_ids: originalRoom.media.map(m => m.id)
-                        };
-                        await roomApi.updateRoom(editingRoomId, revertData);
-                    }
-
-                    throw new Error("Update failed and changes were reverted.");
                 }
+                savedRoomId = updated.id;
+                rooms = rooms.map(r => r.id === editingRoomId ? updated : r);
+                successMessage = "Room updated successfully";
 
             } else {
-                // CREATE FLOW (Atomico lato Backend di solito, ma gestiamo errori base) ---
+                // CREATE ROOM
                 const created = await propertyApi.addRoomToProperty(propertyId, newRoomData);
+                savedRoomId = created.id;
                 rooms = [...rooms, created];
                 successMessage = "Room created successfully";
-                isRoomModalOpen = false;
             }
 
+            // UPLOAD ROOM PHOTOS
+            if (savedRoomId && roomNewFiles.length > 0) {
+                for (const file of roomNewFiles) {
+                    const fullBase64 = await mediaApi.fileToBase64(file);
+                    const cleanBase64 = fullBase64.includes(',') ? fullBase64.split(',')[1] : fullBase64;
+                    const payload: MediaInput = {
+                        fileName: file.name,
+                        fileType: file.type as MediaType,
+                        base64Data: cleanBase64,
+                        description: 'Room Photo',
+                        roomId: savedRoomId
+                    };
+                    await mediaApi.uploadMedia(payload);
+                }
+                const freshRoom = await roomApi.getRoomDetails(savedRoomId);
+                rooms = rooms.map(r => r.id === savedRoomId ? freshRoom : r);
+            }
+
+            isRoomModalOpen = false;
             setTimeout(() => successMessage = null, 3000);
 
         } catch (e: any) {
@@ -292,7 +306,7 @@
         } catch(e) { console.error(e); alert("Failed to delete room"); }
     }
 
-    // --- PHOTOS LOGIC ---
+    // --- PROPERTY PHOTOS ---
     function handleFileSelect(event: Event) {
         const input = event.target as HTMLInputElement;
         if (input.files) {
@@ -305,25 +319,15 @@
             });
         }
     }
-    
     async function uploadNewPhotos() {
         if (newFiles.length === 0) return;
-        let uploadedMediaIds: string[] = [];
         try {
             isSaving = true;
-            error = null;
             for (const file of newFiles) {
                 const fullBase64 = await mediaApi.fileToBase64(file);
                 const cleanBase64 = fullBase64.includes(',') ? fullBase64.split(',')[1] : fullBase64;
-                const payload: MediaInput = {
-                    fileName: file.name,
-                    fileType: file.type as MediaType,
-                    base64Data: cleanBase64,
-                    description: 'Gallery',
-                    propertyId: propertyId
-                };
-                const uploaded = await mediaApi.uploadMedia(payload);
-                uploadedMediaIds.push(uploaded.id);
+                const payload: MediaInput = { fileName: file.name, fileType: file.type as MediaType, base64Data: cleanBase64, description: 'Gallery', propertyId: propertyId };
+                await mediaApi.uploadMedia(payload);
             }
             property = await propertyApi.getPropertyById(propertyId);
             newFiles = []; newPreviews = [];
@@ -331,22 +335,21 @@
             setTimeout(() => successMessage = null, 3000);
         } catch (e) {
             console.error(e);
-            error = 'Failed to upload photos. Reverting...';
-            // Rollback per le foto
-            if (uploadedMediaIds.length > 0) {
-                try { await Promise.all(uploadedMediaIds.map(id => mediaApi.deleteMedia(id))); } catch (ex) { console.error(ex); }
-            }
+            error = 'Failed to upload photos.';
         } finally {
             isSaving = false;
         }
     }
-
     async function deletePhoto(mediaId: string) {
         if(!confirm("Delete this photo?")) return;
         try {
             await mediaApi.deleteMedia(mediaId);
             if (property) property.media = property.media.filter(m => m.id !== mediaId);
         } catch(e) { console.error(e); alert("Failed to delete photo"); }
+    }
+
+    function getAmenityDesc(amenity: any): string | null {
+        return amenity.custom_description || amenity.description || null;
     }
 </script>
 
@@ -400,7 +403,7 @@
                     <li class={activeTab === 'photos' ? 'is-active' : ''}>
                         <button class="button is-ghost is-fullwidth" onclick={() => activeTab = 'photos'}>
                             <span class="icon is-small"><i class="fas fa-images"></i></span>
-                            <span>Photos</span>
+                            <span>Property Photos</span>
                         </button>
                     </li>
                 </ul>
@@ -450,11 +453,7 @@
                             </div>
                         </div>
                         <hr class="dropdown-divider" />
-                        <div class="has-text-right">
-                            <button class="button is-primary has-text-weight-bold shadow-sm {isSaving ? 'is-loading' : ''}" onclick={() => handleUpdate('General Info')}>
-                                Save General Info
-                            </button>
-                        </div>
+                        <div class="has-text-right"><button class="button is-primary has-text-weight-bold shadow-sm {isSaving ? 'is-loading' : ''}" onclick={() => handleUpdate('General Info')}>Save General Info</button></div>
                     </div>
 
                 {:else if activeTab === 'amenities'}
@@ -473,7 +472,7 @@
                                             {#if isPropAmenitySelected(amenity.id)}
                                                 {@const idx = formData.amenities.findIndex(a => a.id === amenity.id)}
                                                 <div class="control">
-                                                    <input class="input is-small has-text-black has-background-white" type="text" placeholder="Add details (e.g. Free, 24/7)" bind:value={formData.amenities[idx].custom_description} />
+                                                    <input class="input is-small has-text-black has-background-white" type="text" placeholder="Details (e.g. Free, 24/7)" bind:value={formData.amenities[idx].custom_description} />
                                                 </div>
                                             {/if}
                                         </div>
@@ -608,74 +607,159 @@
     <div class="modal {isRoomModalOpen ? 'is-active' : ''}">
         <div class="modal-background" onclick={() => isRoomModalOpen = false} aria-hidden="true"></div>
         <div class="modal-card shadow-soft" style="width: 900px; max-width: 95vw;">
-            <header class="modal-card-head has-background-white border-light">
-                <p class="modal-card-title has-text-black">{editingRoomId ? 'Edit Room' : 'Add New Room'}</p>
-                <button class="delete" aria-label="close" onclick={() => isRoomModalOpen = false}></button>
-            </header>
-            <section class="modal-card-body has-background-white">
-                <div class="columns">
-                    <div class="column is-5">
-                        <h6 class="heading has-text-grey-dark mb-3 has-text-weight-bold">Details</h6>
-                        <div class="field"><label class="label is-small has-text-black" for="rType">Type</label><div class="select is-fullwidth"><select id="rType" class="has-text-black has-background-white" bind:value={newRoomData.type}><option value="SINGLE">Single</option><option value="DOUBLE">Double</option><option value="SUITE">Suite</option></select></div></div>
-                        <div class="columns is-mobile"><div class="column"><div class="field"><label class="label is-small has-text-black" for="rPrice">Price (€)</label><input id="rPrice" class="input has-text-black has-background-white" type="number" bind:value={newRoomData.price} min="0" /></div></div><div class="column"><div class="field"><label class="label is-small has-text-black" for="rCap">Capacity</label><input id="rCap" class="input has-text-black has-background-white" type="number" bind:value={newRoomData.capacity} min="1" /></div></div></div>
-                        <div class="field"><label class="label is-small has-text-black" for="rDesc">Description</label><textarea id="rDesc" class="textarea has-text-black has-background-white" rows="4" bind:value={newRoomData.description}></textarea></div>
+            
+            <header class="modal-card-head has-background-white border-light pb-0" style="display: block;">
+                <div class="level is-mobile mb-2">
+                    <div class="level-left">
+                        <p class="modal-card-title has-text-black">{editingRoomId ? 'Edit Room' : 'Add New Room'}</p>
                     </div>
-                    
-                    <div class="column is-7" style="border-left: 1px solid #f0f0f0;">
-                        <h6 class="heading has-text-grey-dark mb-3 has-text-weight-bold">Room Amenities</h6>
-                        <div class="box has-background-white-ter is-shadowless border-light p-3 mb-4" style="max-height: 250px; overflow-y: auto;">
-                            {#each roomAmenityCatalog as ra}
-                                <div class="field mb-2 p-2 has-background-white border-light" style="border-radius: 4px;">
-                                    <label class="checkbox is-flex is-align-items-center">
-                                        <input type="checkbox" checked={isRoomAmenitySelected(ra.id)} onchange={() => toggleRoomAmenity(ra.id)} class="mr-2">
-                                        <span class="icon is-small has-text-grey mr-2"><i class="fas {getAmenityIcon(ra.name, ra.category, 'room')}"></i></span>
-                                        <span class="is-size-7 has-text-weight-bold has-text-black">{ra.name}</span>
-                                    </label>
-                                    {#if isRoomAmenitySelected(ra.id)}
-                                        {@const idx = newRoomData.amenities.findIndex(a => a.id === ra.id)}
-                                        <input class="input is-small mt-1 has-text-black has-background-white" type="text" placeholder="Details" bind:value={newRoomData.amenities[idx].custom_description} />
+                    <div class="level-right">
+                        <button class="delete" aria-label="close" onclick={() => isRoomModalOpen = false}></button>
+                    </div>
+                </div>
+
+                <div class="tabs is-boxed is-small mb-0 mt-5">
+                    <ul style="">
+                        <li class={activeRoomTab === 'details' ? 'is-active' : ''}>
+                            <button onclick={() => activeRoomTab = 'details'}>
+                                <span class="icon is-small"><i class="fas fa-info-circle"></i></span>
+                                <span>Room Details & Amenities</span>
+                            </button>
+                        </li>
+                        <li class={activeRoomTab === 'photos' ? 'is-active' : ''}>
+                            <button onclick={() => activeRoomTab = 'photos'}>
+                                <span class="icon is-small"><i class="fas fa-images"></i></span>
+                                <span>Room Photos</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </header>
+
+            <section class="modal-card-body has-background-white" style="border-top-left-radius: 0;">
+                
+                {#if activeRoomTab === 'details'}
+                    <div class="animate-fade">
+                        <div class="columns">
+                            <div class="column is-5">
+                                <h6 class="heading has-text-grey-dark mb-3 has-text-weight-bold">Basic Info</h6>
+                                <div class="field"><label class="label is-small has-text-black" for="rType">Type</label><div class="select is-fullwidth"><select id="rType" class="has-text-black has-background-white" bind:value={newRoomData.type}><option value="SINGLE">Single</option><option value="DOUBLE">Double</option><option value="SUITE">Suite</option></select></div></div>
+                                <div class="columns is-mobile"><div class="column"><div class="field"><label class="label is-small has-text-black" for="rPrice">Price (€)</label><input id="rPrice" class="input has-text-black has-background-white" type="number" bind:value={newRoomData.price} min="0" /></div></div><div class="column"><div class="field"><label class="label is-small has-text-black" for="rCap">Capacity</label><input id="rCap" class="input has-text-black has-background-white" type="number" bind:value={newRoomData.capacity} min="1" /></div></div></div>
+                                <div class="field"><label class="label is-small has-text-black" for="rDesc">Description</label><textarea id="rDesc" class="textarea has-text-black has-background-white" rows="5" bind:value={newRoomData.description}></textarea></div>
+                            </div>
+                            
+                            <div class="column is-7" style="border-left: 1px solid #f0f0f0;">
+                                <h6 class="heading has-text-grey-dark mb-3 has-text-weight-bold">Room Amenities</h6>
+                                
+                                <div class="box has-background-white-ter is-shadowless border-light p-3 mb-4" style="max-height: 250px; overflow-y: auto;">
+                                    {#each roomAmenityCatalog as ra}
+                                        <div class="field mb-2 p-2 has-background-white border-light" style="border-radius: 4px;">
+                                            <label class="checkbox is-flex is-align-items-center">
+                                                <input type="checkbox" checked={isRoomAmenitySelected(ra.id)} onchange={() => toggleRoomAmenity(ra.id)} class="mr-2">
+                                                <span class="icon is-small has-text-grey mr-2"><i class="fas {getAmenityIcon(ra.name, ra.category, 'room')}"></i></span>
+                                                <span class="is-size-7 has-text-weight-bold has-text-black">{ra.name}</span>
+                                            </label>
+                                            {#if isRoomAmenitySelected(ra.id)}
+                                                {@const idx = newRoomData.amenities.findIndex(a => a.id === ra.id)}
+                                                <input class="input is-small mt-1 has-text-black has-background-white" type="text" placeholder="Details" bind:value={newRoomData.amenities[idx].custom_description} />
+                                            {/if}
+                                        </div>
+                                    {/each}
+                                </div>
+
+                                {#if currentRoomCustomAmenities.length > 0}
+                                    <div class="box has-background-white-ter is-shadowless border-light p-3 mb-4">
+                                        <h6 class="heading has-text-grey-dark is-size-7 has-text-weight-bold mb-2">Active Custom Services</h6>
+                                        {#each currentRoomCustomAmenities as ra}
+                                            <div class="field mb-2 p-2 has-background-white border-light" style="border-radius: 4px;">
+                                                <label class="checkbox is-flex is-align-items-center">
+                                                    <input type="checkbox" checked={isRoomAmenitySelected(ra.id)} onchange={() => toggleRoomAmenity(ra.id)} class="mr-2">
+                                                    <span class="icon is-small has-text-grey mr-2"><i class="fas {getAmenityIcon(ra.name, ra.category, 'room')}"></i></span>
+                                                    <span class="is-size-7 has-text-weight-bold has-text-black">{ra.name}</span>
+                                                    <span class="tag is-info is-light is-rounded is-small ml-2" style="font-size: 0.65rem;">Custom</span>
+                                                </label>
+                                                {#if isRoomAmenitySelected(ra.id)}
+                                                    {@const idx = newRoomData.amenities.findIndex(a => a.id === ra.id)}
+                                                    <input class="input is-small mt-1 has-text-black has-background-white" type="text" placeholder="Details" bind:value={newRoomData.amenities[idx].custom_description} />
+                                                {/if}
+                                            </div>
+                                        {/each}
+                                    </div>
+                                {/if}
+
+                                <div class="box has-background-white border-light shadow-sm p-3">
+                                    <p class="is-size-7 has-text-weight-bold mb-2 has-text-black">Create Custom Room Amenity</p>
+                                    <div class="field is-grouped">
+                                        <div class="control is-expanded"><input class="input is-small has-text-black has-background-white" type="text" placeholder="Name" bind:value={tempNewRoomAmenity.name}></div>
+                                        <div class="control"><div class="select is-small"><select class="has-text-black has-background-white" bind:value={tempNewRoomAmenity.category}>{#each AMENITY_CATEGORIES as category}<option value={category}>{category}</option>{/each}</select></div></div>
+                                    </div>
+                                    <div class="field has-addons">
+                                        <div class="control is-expanded"><input class="input is-small has-text-black has-background-white" type="text" placeholder="Details" bind:value={tempNewRoomAmenity.description}></div>
+                                        <div class="control"><button class="button is-small is-info has-text-weight-bold" onclick={addCustomAmenityToRoom} disabled={!tempNewRoomAmenity.name}>Add</button></div>
+                                    </div>
+                                    {#if newRoomData.new_amenities && newRoomData.new_amenities.length > 0}
+                                        <div class="tags mt-2">{#each newRoomData.new_amenities as item, i}<span class="tag is-info is-light">{item.name}<button aria-label="Remove custom amenity" class="delete is-small" onclick={() => removeCustomAmenityFromRoom(i)}></button></span>{/each}</div>
                                     {/if}
                                 </div>
-                            {/each}
+                            </div>
+                        </div>
+                    </div>
+
+                {:else if activeRoomTab === 'photos'}
+                    <div class="animate-fade">
+                        <div class="notification is-light is-info is-small mb-4">
+                            <i class="fas fa-info-circle mr-2"></i> Photos added here will be specific to this room.
                         </div>
 
-                        {#if currentRoomCustomAmenities.length > 0}
-                            <div class="box has-background-white-ter is-shadowless border-light p-3 mb-4">
-                                <h6 class="heading has-text-grey-dark is-size-7 has-text-weight-bold mb-2">Active Custom Services</h6>
-                                {#each currentRoomCustomAmenities as ra}
-                                    <div class="field mb-2 p-2 has-background-white border-light" style="border-radius: 4px;">
-                                        <label class="checkbox is-flex is-align-items-center">
-                                            <input type="checkbox" checked={isRoomAmenitySelected(ra.id)} onchange={() => toggleRoomAmenity(ra.id)} class="mr-2">
-                                            <span class="icon is-small has-text-grey mr-2"><i class="fas {getAmenityIcon(ra.name, ra.category, 'room')}"></i></span>
-                                            <span class="is-size-7 has-text-weight-bold has-text-black">{ra.name}</span>
-                                            <span class="tag is-info is-light is-rounded is-small ml-2" style="font-size: 0.65rem;">Custom</span>
-                                        </label>
-                                        {#if isRoomAmenitySelected(ra.id)}
-                                            {@const idx = newRoomData.amenities.findIndex(a => a.id === ra.id)}
-                                            <input class="input is-small mt-1 has-text-black has-background-white" type="text" placeholder="Details" bind:value={newRoomData.amenities[idx].custom_description} />
-                                        {/if}
+                        {#if editingRoomId}
+                            {@const currentRoom = rooms.find(r => r.id === editingRoomId)}
+                            {#if currentRoom && currentRoom.media && currentRoom.media.length > 0}
+                                <h6 class="heading has-text-grey-dark mb-3 has-text-weight-bold">Existing Photos</h6>
+                                <div class="columns is-multiline is-mobile mb-5">
+                                    {#each currentRoom.media as media}
+                                        <div class="column is-3-desktop is-4-tablet is-6-mobile">
+                                            <div class="card shadow-sm border-light">
+                                                <div class="card-image">
+                                                    <figure class="image is-4by3">
+                                                        <img src={media.storage_path} alt="Room" style="object-fit: cover;">
+                                                    </figure>
+                                                </div>
+                                                <button aria-label="Delete photo" class="delete is-medium" style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6);" onclick={() => deleteRoomExistingPhoto(media.id)}></button>
+                                            </div>
+                                        </div>
+                                    {/each}
+                                </div>
+                            {/if}
+                        {/if}
+
+                        <hr class="dropdown-divider">
+
+                        <h6 class="heading has-text-grey-dark mb-3 has-text-weight-bold">Upload New Photos</h6>
+                        <div class="file is-boxed is-primary is-centered has-text-centered mb-5">
+                            <label class="file-label" style="width: 100%;">
+                                <input class="file-input" type="file" multiple accept="image/*" onchange={handleRoomFileSelect}>
+                                <span class="file-cta p-5 has-background-white-ter" style="border: 2px dashed #b5b5b5; border-radius: 8px;">
+                                    <span class="file-icon is-size-2 has-text-primary"><i class="fas fa-cloud-upload-alt"></i></span>
+                                    <span class="file-label mt-2 has-text-grey-darker is-size-5 has-text-weight-semibold">Click to select photos</span>
+                                </span>
+                            </label>
+                        </div>
+                        {#if roomPreviews.length > 0}
+                            <div class="columns is-multiline is-mobile mb-4">
+                                {#each roomPreviews as src, i}
+                                    <div class="column is-2">
+                                        <figure class="image is-1by1 shadow-sm" style="position: relative;">
+                                            <img {src} alt="Preview" style="object-fit:cover; border-radius:4px">
+                                            <button aria-label="Remove photo" class="delete is-small" style="position: absolute; top: 2px; right: 2px;" onclick={() => removeRoomNewFile(i)}></button>
+                                        </figure>
                                     </div>
                                 {/each}
                             </div>
                         {/if}
-
-                        <div class="box has-background-white border-light shadow-sm p-3">
-                            <p class="is-size-7 has-text-weight-bold mb-2 has-text-black">Create Custom Room Amenity</p>
-                            <div class="field is-grouped">
-                                <div class="control is-expanded"><input class="input is-small has-text-black has-background-white" type="text" placeholder="Name" bind:value={tempNewRoomAmenity.name} aria-label="Name"></div>
-                                <div class="control"><div class="select is-small"><select class="has-text-black has-background-white" bind:value={tempNewRoomAmenity.category} aria-label="Cat">{#each AMENITY_CATEGORIES as category}<option value={category}>{category}</option>{/each}</select></div></div>
-                            </div>
-                            <div class="field has-addons">
-                                <div class="control is-expanded"><input class="input is-small has-text-black has-background-white" type="text" placeholder="Details" bind:value={tempNewRoomAmenity.description} aria-label="Desc"></div>
-                                <div class="control"><button class="button is-small is-info has-text-weight-bold" onclick={addCustomAmenityToRoom} disabled={!tempNewRoomAmenity.name}>Add</button></div>
-                            </div>
-                            {#if newRoomData.new_amenities && newRoomData.new_amenities.length > 0}
-                                <div class="tags mt-2">{#each newRoomData.new_amenities as item, i}<span class="tag is-info is-light">{item.name}<button class="delete is-small" onclick={() => removeCustomAmenityFromRoom(i)} aria-label="remove"></button></span>{/each}</div>
-                            {/if}
-                        </div>
                     </div>
-                </div>
+                {/if}
             </section>
+            
             <footer class="modal-card-foot has-background-white-ter border-light" style="justify-content: flex-end;">
                 <button class="button" onclick={() => isRoomModalOpen = false}>Cancel</button>
                 <button class="button is-success has-text-weight-bold shadow-sm {isSaving ? 'is-loading' : ''}" onclick={saveRoom}>{editingRoomId ? 'Update Room' : 'Save Room'}</button>
@@ -694,7 +778,7 @@
     .input::placeholder, .textarea::placeholder { color: #7a7a7a !important; opacity: 1; }
     .input:focus, .textarea:focus, .select select:focus { border-color: #00d1b2; box-shadow: 0 0 0 0.125em rgba(0, 209, 178, 0.25) !important; }
 
-    .tabs.is-boxed li.is-active button { background-color: white; border-color: #e0e0e0; border-bottom-color: transparent !important; color: #00d1b2; }
+    .tabs.is-boxed li.is-active button { background-color: white; border-color: #e0e0e0; border-bottom-color: transparent !important; color: #00d1b2;}
     .tabs.is-boxed button { border: 1px solid transparent; border-radius: 4px 4px 0 0; color: #4a4a4a; background: transparent; text-decoration: none; }
     .tabs.is-boxed ul { border-bottom-color: #e0e0e0; }
     
@@ -709,4 +793,13 @@
     .has-tooltip:hover .tooltip-content { visibility: visible; opacity: 1; bottom: 140%; }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    .tabs ul {
+        gap: 20px;
+    }
+
+    .tabs .icon:first-child {
+        margin-inline-end: 0 !important;
+        margin-right: 0 !important;
+    }
 </style>
