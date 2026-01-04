@@ -144,8 +144,13 @@ def get_room_service(
     property_repo: PropertyRepository = Depends(get_property_repo),
     media_repo: MediaRepository = Depends(get_media_repo)
 ) -> RoomService:
-    return RoomService(room_repo, room_amenity_factory, amenity_repo, property_repo, media_repo)
-
+    return RoomService(
+        room_repo=room_repo,
+        property_repo=property_repo,
+        media_repo=media_repo,
+        room_amenity_factory=room_amenity_factory,
+        amenity_repo=amenity_repo
+    )
 
 def get_property_amenity_repo(db: Session = Depends(get_db)) -> PropertyAmenityRepository:
     return PropertyAmenityRepository(db)

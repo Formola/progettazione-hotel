@@ -42,8 +42,8 @@ class PropertyApi {
         return response.data;
     }
 
-    async getRoomsForProperty(propertyId: string): Promise<any[]> {
-        const response = await apiClient.get<any[]>(`/api/properties/${propertyId}/rooms`);
+    async getRoomsForProperty(propertyId: string): Promise<RoomData[]> {
+        const response = await apiClient.get<RoomData[]>(`/api/properties/${propertyId}/rooms`);
         return response.data;
     }
 
