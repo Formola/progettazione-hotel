@@ -220,6 +220,8 @@
                 reader.readAsDataURL(file);
             });
         }
+
+        input.value = ''; // Reset input value to allow re-uploading same files
     }
 
     function removeRoomNewFile(index: number) {
@@ -318,6 +320,8 @@
                 reader.readAsDataURL(file);
             });
         }
+
+        input.value = ''; // Reset input value to allow re-uploading same files
     }
     async function uploadNewPhotos() {
         if (newFiles.length === 0) return;
@@ -340,6 +344,13 @@
             isSaving = false;
         }
     }
+
+    // Funzione per rimuovere un file dalla lista di upload della Property
+    function removeNewFile(index: number) {
+        newFiles = newFiles.filter((_, i) => i !== index);
+        newPreviews = newPreviews.filter((_, i) => i !== index);
+    }
+
     async function deletePhoto(mediaId: string) {
         if(!confirm("Delete this photo?")) return;
         try {
@@ -573,18 +584,9 @@
                 {:else if activeTab === 'photos'}
                     <div class="animate-fade">
                         <h3 class="title is-5 has-text-black">Photo Gallery</h3>
-                        <div class="columns is-multiline is-mobile mb-6">
-                            {#each property.media as media}
-                                <div class="column is-3-desktop is-6-mobile">
-                                    <div class="card shadow-sm border-light">
-                                        <div class="card-image"><figure class="image is-4by3"><img src={media.storage_path} alt="Property" style="object-fit:cover; border-radius: 4px 4px 0 0;"></figure></div>
-                                        <button class="delete is-medium" style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6);" onclick={() => deletePhoto(media.id)} aria-label="Delete"></button>
-                                    </div>
-                                </div>
-                            {/each}
-                        </div>
                         <hr class="dropdown-divider" />
                         <h3 class="title is-5 has-text-black mb-4">Upload New Photos</h3>
+                        
                         <div class="file is-boxed is-primary is-centered has-text-centered mb-5">
                             <label class="file-label" style="width: 100%;">
                                 <input class="file-input" type="file" multiple accept="image/*" onchange={handleFileSelect} />
@@ -594,9 +596,34 @@
                                 </span>
                             </label>
                         </div>
+
                         {#if newPreviews.length > 0}
-                            <div class="columns is-multiline is-mobile mb-4">{#each newPreviews as src}<div class="column is-2"><figure class="image is-1by1 shadow-sm"><img {src} alt="Preview" style="object-fit:cover; border-radius:4px"></figure></div>{/each}</div>
-                            <div class="has-text-centered"><button class="button is-primary has-text-weight-bold shadow-sm {isSaving ? 'is-loading' : ''}" onclick={uploadNewPhotos}>Upload {newFiles.length} Files</button></div>
+                            <div class="columns is-multiline is-mobile mb-4">
+                                {#each newPreviews as src, i}
+                                    <div class="column is-2">
+                                        <figure class="image is-1by1 shadow-sm" style="position: relative;">
+                                            <img {src} alt="Preview" style="object-fit:cover; border-radius:4px">
+                                            <button 
+                                                class="delete is-small" 
+                                                style="position: absolute; top: 5px; right: 5px; background-color: rgba(0,0,0,0.6);" 
+                                                onclick={() => removeNewFile(i)}
+                                                aria-label="Remove photo"
+                                            ></button>
+                                        </figure>
+                                    </div>
+                                {/each}
+                            </div>
+                            
+                            <div class="field is-grouped is-grouped-centered">
+                                <div class="control">
+                                    <button class="button is-danger is-light" onclick={() => { newFiles = []; newPreviews = []; }}>Clear All</button>
+                                </div>
+                                <div class="control">
+                                    <button class="button is-primary has-text-weight-bold shadow-sm {isSaving ? 'is-loading' : ''}" onclick={uploadNewPhotos}>
+                                        Upload {newFiles.length} Files
+                                    </button>
+                                </div>
+                            </div>
                         {/if}
                     </div>
                 {/if}
