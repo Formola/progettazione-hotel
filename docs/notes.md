@@ -368,8 +368,8 @@ In questo modo, il diagramma mostra chiaramente:
 | **Descrizione**                     | Permette all’owner autenticato di inserire una nuova proprietà nel sistema, configurando stanze, prezzi, amenities e caricando media.                                                           |
 | **Attori**                          | Authenticated User (Property Owner)                                                                                                                                                             |
 | **Precondizioni**                   | L’owner deve essere autenticato.                                                                                                                                                                |
-| **Postcondizioni**                  | La nuova proprietà è memorizzata nel database.                                                                                                                                                  |
-| **Flusso principale degli eventi**  | 1. L’owner seleziona “Create New Property”.<br>2. L’owner inserisce i dettagli della proprietà e delle stanze.<br>3. L’owner può caricare media opzionali.<br>4. Il sistema salva la proprietà. |
+| **Postcondizioni**                  | La nuova proprietà è memorizzata nel database. In seguito l'owner potrà aggiungere le rooms.                                                                                                                                                |
+| **Flusso principale degli eventi**  | 1. L’owner seleziona “Create New Property”.<br>2. L’owner può caricare media opzionali.<br>3. Il sistema salva la proprietà. |
 | **Flusso alternativo degli eventi** | 2a. Dati incompleti o non validi: il sistema mostra un messaggio di errore e richiede correzione.                                                                                               |
 | **Requisiti speciali**              | Validazione dei dati di input, gestione errori di caricamento media.                                                                                                                            |
 
@@ -946,18 +946,23 @@ https://en.clouddesignpattern.org/index.php/CDP_Scale_Out_Pattern.html
 
 Vediamo cosa, della nostra architettura cloud basata su AWS, è possibile emulare con LocalStack Community Edition (gratuita) e cosa invece richiede la versione Pro (a pagamento).
 
-| Servizio | Tipo Supporto Community | Creabile/Testabile con Terraform | Note API Coverage |
-|----------|------------------------|------------------------|-------------------|
-| **Route 53 DNS** | ✅ Emulato parzialmente | ✅ Sì | Alcune API non implementate in localstack |
-| **CloudFront** | ❌ Solo Pro | ❌ No | Servizio CDN richiede Pro |
-| **ELB (Load Balancer)** | ❌ Solo Pro | ❌ No | Maggior parte API marcate "Pro" |
-| **Cognito** | ❌ Solo Pro | ❌ No | API Coverage mostra "Pro" |
-| **EC2** | 🟠 Mockato | 🟠 Sì (ma è finta) | API disponibili ma solo mock, non crea container/vm|
-| **CloudWatch** | ✅ Emulato base | ✅ Sì | Logs funzionanti, alcune API Pro |
-| **Autoscaling** | ❌ Solo Pro | ❌ No | API Coverage "Pro" |
-| **API Gateway** | ✅ REST (V1) Emulato | ✅ Sì (solo V1) | V1 in Community, V2 è Pro |
-| **RDS/Aurora** | ❌ Solo Pro | ❌ No | Database reali richiedono Pro |
-| **S3** | ✅ Emulato completamente | ✅ Sì | Completamente in Community |
+### Confronto LocalStack: Community vs Pro (Student)
+
+| Servizio | LocalStack Community (Gratis) | LocalStack Pro (Student/License) | Cosa succede con Terraform? |
+| :--- | :--- | :--- | :--- |
+| **EC2** | 🟠 **Finta (Mock)** | ✅ **Reale (Emulato)** | **Comm:** Terraform dice "Creato", ma **non esiste nessun server**. Non puoi collegarti o lanciare comandi. <br>**Pro:** Avvia un vero container che si comporta come un server. |
+| **ELB / ALB** | 🟠 **Instabile / Mock** | 🟠 **Reale (Emulato)** | Il Load Balancer sembra attivo ("Healthy"), ma **non passa il traffico** alle istanze. |
+| **RDS (Database)** | 🟠 **Finta (Mock)** | ✅ **Reale (Emulato)** | **Comm:** Terraform dice "DB Pronto", ma **non c'è nessun database** a cui connettersi. <br>**Pro:** Avvia un vero database (MySQL/Postgres) utilizzabile. |
+| **CloudFront** | 🟠 **Finta (Mock)** | ✅ **Reale (Emulato)** | **Comm:** Accetta la configurazione ma **non funziona**. <br>**Pro:** Distribuisce davvero i contenuti come una CDN. |
+| **Cognito** | ✅ **Reale (Base)** | ✅ **Reale (Completo)** | **Comm:** Login e registrazione utenti funzionano. <br>**Pro:** Serve per funzioni complesse (es. collegare Facebook/Google o trigger avanzati). |
+| **API Gateway** | ✅ **Reale** | ✅ **Reale** | Funziona in entrambe le versioni per creare API REST e collegarle alle Lambda. |
+| **Lambda** | ✅ **Reale** | ✅ **Reale** | Funziona in entrambe. La Pro aggiunge strumenti migliori per il debug (trovare errori). |
+| **S3** | ✅ **Reale** | ✅ **Reale** | Caricamento e scaricamento file funzionano perfettamente in entrambe. |
+| **Route53** | ✅ **Reale (Base)** | ✅ **Reale (Avanzato)** | **Comm:** Gestisce i nomi DNS semplici. <br>**Pro:** Serve per reti complesse o ibride. |
+
+#### Legenda
+- ✅ **Reale (Emulato):** Il servizio funziona davvero. Se crei un server o un DB, questo si avvia e puoi usarlo.
+- 🟠 **Finta (Mock):** LocalStack dice a Terraform "Tutto OK" solo per non far fallire lo script, ma **non crea nulla di funzionante**. È solo un guscio vuoto.
 
 
 **EC2 (Elastic Compute Cloud)** - Le API EC2 sono disponibili in Community ma tutto è completamente mockato. La documentazione è esplicita: "Mock VM Manager - all resources are stored as in-memory representation. This only offers the CRUD capability. This is the default VM manager in LocalStack Community edition." Con Terraform è possibile creare `aws_instance`, `aws_security_group`, `aws_key_pair` e si riceveranno instance IDs validi. Le API rispondono correttamente. Ma c'è zero esecuzione reale: nessuna VM, nessun container, nessun SSH, nessun user data execution. Le istanze sono solo record JSON in memoria. Per un'architettura applicativa le EC2 risulteranno completamente inutilizzabili.
@@ -990,8 +995,6 @@ In LocalStack Pro, EC2 APIs utilize the Docker Engine backend to emulate EC2 ins
 
 In LocalStack, networking features like subnets and VPCs are not emulated. LocalStack provides a default security group that manages the exposed ports for the EC2 instance. While users can create additional security groups, LocalStack focuses on the default security group.
 
-L'analisi è corretta. Il passaggio della documentazione da te citato evidenzia una fondamentale discrepanza tra il modello teorico delle risorse AWS (Infrastructure as Code) e l'effettiva implementazione tecnica all'interno di LocalStack Community.
-
 In questo ambiente di emulazione (anche versione pro), le primitive di rete quali VPC, Subnet e Route Tables rappresentano pure astrazioni logiche memorizzate nel database interno dell'applicazione (spesso gestito dalla libreria Moto), ma non corrispondono a una reale segmentazione della rete a livello infrastrutturale. Tutti i container lanciati, indipendentemente dal VPC di appartenenza dichiarato in Terraform, risiedono fisicamente sulla medesima rete "bridge" di Docker. Poiché l'isolamento di rete non è realmente emulato, il software necessita di un criterio deterministico per decidere quali porte del container debbano essere esposte sull'interfaccia di loopback (localhost) della macchina ospitante.
 
 Per semplificare l'esperienza di sviluppo, tale criterio è stato programmaticamente vincolato al Security Group di default. Quando LocalStack rileva una regola di ingresso (Ingress Rule) su questo specifico gruppo, interpreta tale configurazione come un'istruzione operativa da trasmettere al demone Docker, eseguendo effettivamente il port binding (il comando -p host_port:container_port).
@@ -1017,7 +1020,7 @@ Nel nostro caso con le ec2 di localstack lanciate in container docker, su macos 
 
 1. capitolo introduttivo in cui speghiamo cosa vogliamo fare e obiettivi. iac e cloud
 2. stato dell arte. cosa abbiamo usato spiegazione. terraform ansible ecc, tutte le tecnologie. anche localstack.
-3. cap metodologie. trovato libro con app. spieghioamo la nostra arch e pattern e come useremo localstack. progettazione database. tutto uml.
+3. cap metodologie. trovato libro con app. spieghiamo la nostra arch e pattern e come useremo localstack. progettazione database. tutto uml.
 4. implementazione. facciamo anche vedere un po di codice tf, docker compose. solo cose fondamentali.
 5. risultati. descriviamo l'app funzionante
 6. conclusioni. cosa ho imparato dalla tesi, limitiazioni, cosa si puo migliorare. 
