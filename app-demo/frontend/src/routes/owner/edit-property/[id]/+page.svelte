@@ -874,39 +874,17 @@
 
 										{#if room.media && room.media.length > 0}
 											<div class="room-gallery">
-												<button
-													class="gallery-main"
-													onclick={() => openEditRoomModal(room, 'photos')}
-													aria-label="View all room photos"
-												>
-													<img
-														src={room.media[0].storage_path}
-														alt={room.type}
-														class="gallery-main-img"
-													/>
-													<div class="gallery-overlay">
-														<i class="fas fa-search-plus"></i>
-														<span>View all photos</span>
-													</div>
-												</button>
-												{#if room.media.length > 1}
-													<div class="gallery-grid">
-														{#each room.media.slice(1, 4) as media, idx}
-															<button
-																class="gallery-thumb"
-																onclick={() => openEditRoomModal(room, 'photos')}
-																aria-label="View room photos"
-															>
-																<img src={media.storage_path} alt={`${room.type} - ${idx + 2}`} />
-																{#if idx === 2 && room.media.length > 4}
-																	<div class="gallery-more">
-																		<span>+{room.media.length - 4}</span>
-																	</div>
-																{/if}
-															</button>
-														{/each}
-													</div>
-												{/if}
+												<div class="room-gallery-split">
+													{#each room.media.slice(0, 2) as media}
+														<button
+															class="gallery-item-half"
+															onclick={() => openEditRoomModal(room, 'photos')}
+															title="View photos"
+														>
+															<img src={media.storage_path} alt={room.type} />
+														</button>
+													{/each}
+												</div>
 											</div>
 										{:else}
 											<div class="room-no-photos">
@@ -1618,10 +1596,9 @@
 		color: #6d28d9;
 	}
 
-	
-    /* SINGLE - Blue Gradient */
+	/* SINGLE - Blue Gradient */
 
-    .tabs.is-toggle li.is-active.tab-all button {
+	.tabs.is-toggle li.is-active.tab-all button {
 		background: linear-gradient(135deg, #5fce44 0%, #4dcb55 100%) !important;
 		border-color: #2563eb !important;
 		color: white !important;
@@ -1835,10 +1812,9 @@
 	/* STILI GALLERY (Rimasti uguali) */
 	.room-gallery {
 		padding: 1.5rem;
-		display: grid;
-		grid-template-columns: 2fr 1fr;
-		gap: 0.75rem;
 		background: #fafafa;
+		display: block;
+		width: 100%;
 	}
 	.gallery-main {
 		position: relative;
@@ -1940,6 +1916,62 @@
 		font-weight: 500;
 	}
 
+	/* Container della griglia */
+	.simple-gallery {
+		display: grid;
+		gap: 0.5rem; /* Spazio tra le foto */
+		width: 100%;
+		height: 200px; /* Altezza fissa della gallery */
+		border-radius: 0.75rem;
+		overflow: hidden;
+	}
+
+	/* Layout a 1 colonna se c'è 1 foto */
+	.simple-gallery.count-1 {
+		grid-template-columns: 1fr;
+	}
+
+	/* Layout a 2 colonne se ci sono 2+ foto */
+	.simple-gallery.count-2 {
+		grid-template-columns: 1fr 1fr;
+	}
+
+	/* Stile del singolo item (bottone) */
+	.gallery-item {
+		position: relative;
+		width: 100%;
+		height: 100%;
+		padding: 0;
+		border: none;
+		cursor: pointer;
+		overflow: hidden;
+	}
+
+	/* Immagine che copre tutto lo spazio */
+	.gallery-item img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		transition: transform 0.3s ease;
+	}
+
+	.gallery-item:hover img {
+		transform: scale(1.05);
+	}
+
+	/* Overlay scuro per il "+N" */
+	.gallery-overlay {
+		position: absolute;
+		inset: 0; /* top, right, bottom, left: 0 */
+		background-color: rgba(0, 0, 0, 0.5); /* Velo nero semitrasparente */
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: white;
+		font-weight: bold;
+		font-size: 1.25rem;
+	}
+
 	/* UTILITIES E BASE (Dal vecchio blocco) */
 	.shadow-soft {
 		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
@@ -2039,7 +2071,6 @@
 	.room-filters li {
 		display: inline-block; /* Evita il collasso */
 		margin: 0 !important;
-        
 	}
 
 	/* Stile base del bottone Filtro */
@@ -2091,5 +2122,39 @@
 	.room-filters li.is-active .tag {
 		background-color: rgba(255, 255, 255, 0.2);
 		color: white;
+	}
+
+	/* Il contenitore delle foto: GRID a 2 colonne fisse */
+	.room-gallery-split {
+		display: grid; /* Usiamo Grid per creare le "caselle" */
+		grid-template-columns: 1fr 1fr; /* Crea SEMPRE due colonne uguali (50% - 50%) */
+		width: 100%;
+		height: 220px;
+		gap: 8px;
+		border-radius: 12px;
+		overflow: hidden;
+	}
+
+	/* Le singole foto */
+	.gallery-item-half {
+		width: 100%; /* Occupa tutta la sua casella (ma non oltre) */
+		height: 100%;
+		padding: 0;
+		border: none;
+		overflow: hidden;
+		cursor: pointer;
+		position: relative;
+		background-color: #e0e0e0;
+	}
+
+	.gallery-item-half img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		transition: transform 0.3s ease;
+	}
+
+	.gallery-item-half:hover img {
+		transform: scale(1.05);
 	}
 </style>

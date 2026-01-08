@@ -13,7 +13,20 @@ class MediaService:
 
     def upload_media(self, data: MediaInput) -> entities.Media:
         media_id = str(uuid.uuid4())
-        unique_filename = f"{media_id}-{data.file_name}"
+        
+        # Costruiamo il nome base del file
+        base_filename = f"{media_id}-{data.file_name}"
+        
+        # DEFINIZIONE DELLA CARTELLA (Key Prefix). Sono dir 'finte'in s3, fanno parte del nome del file,
+        # ma aiutano a organizzare i file in "cartelle virtuali".
+        
+        # Se abbiamo il property_id, lo usiamo come "cartella"
+        if data.property_id:
+            # Es: "prop0x/uuid-foto.jpg"
+            s3_key = f"{data.property_id}/{base_filename}"
+        else:
+            # Fallback se non c'è property_id (va nella root)
+            s3_key = base_filename
 
         # Decodifica Base64
         b64_str = data.base_64_data
@@ -21,9 +34,9 @@ class MediaService:
             b64_str = b64_str.split(",")[1]
         file_bytes = base64.b64decode(b64_str)
 
-        # Upload Fisico (S3)
+        # Upload Fisico (Passiamo la chiave completa con lo slash!)
         storage_path = self.storage.store_media(
-            file_name=unique_filename,
+            file_name=s3_key,
             file_data=file_bytes,
             content_type=data.file_type.value
         )
@@ -37,8 +50,7 @@ class MediaService:
             description=data.description
         )
 
-        # Salvataggio DB con Collegamento
-        # Passiamo esplicitamente property_id O room_id
+        # Salvataggio DB
         self.media_repo.save(
             new_media, 
             property_id=data.property_id, 
