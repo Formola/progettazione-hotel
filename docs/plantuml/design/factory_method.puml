@@ -1,0 +1,69 @@
+@startuml FactoryMethod_Amenities
+' --- STILE EVIDENZIATO ---
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+
+' --- INTERFACCIA PRODOTTO ---
+interface IAmenity <<Product>> {
+    +getName(): String
+    +getCategory(): String
+    +getDescription(): String
+    +getCustomDescription(): String
+    +isGlobal(): Boolean
+}
+
+' --- PRODOTTI CONCRETI ---
+class PropertyAmenity <<ConcreteProduct>> {
+    +id: String
+    +name: String
+    +category: String
+    +description: String
+    +custom_description: String
+    +is_global: Boolean
+    +getName(): String
+    +getCategory(): String
+    +getDescription(): String
+    +getCustomDescription(): String
+    +isGlobal(): Boolean
+}
+class RoomAmenity <<ConcreteProduct>> {
+    +id: String
+    +name: String
+    +category: String
+    +description: String
+    +custom_description: String
+    +getName(): String
+    +getCategory(): String
+    +getDescription(): String
+    +getCustomDescription(): String
+    +isGlobal(): Boolean
+}
+
+IAmenity <|.. PropertyAmenity
+IAmenity <|.. RoomAmenity
+
+' --- CREATOR ASTRATTO ---
+abstract class AmenityFactory <<Creator>>{
+    +create_amenity(...): IAmenity
+}
+
+' --- CREATORS CONCRETI ---
+class PropertyAmenityFactory <<ConcreteCreator>>{
+    +create_amenity(...): IAmenity
+}
+class RoomAmenityFactory <<ConcreteCreator>>{
+    +create_amenity(...): IAmenity
+}
+
+AmenityFactory <|-- PropertyAmenityFactory
+AmenityFactory <|-- RoomAmenityFactory
+
+' --- RELAZIONE DI CREAZIONE (opzionale, per chiarezza)
+PropertyAmenityFactory ..> PropertyAmenity : creates
+RoomAmenityFactory ..> RoomAmenity : creates
+
+'dashbed tra creator e product
+AmenityFactory .. IAmenity : creates
+
+@enduml

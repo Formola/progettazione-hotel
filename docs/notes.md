@@ -509,8 +509,9 @@ In questo modo, il diagramma mostra chiaramente:
 
 ### **Class Diagram di Analisi**
 
-<!-- ![Component Diagram](./plantuml/analisi/class_analisi.puml) -->
-![uml Diagram](./img/uml_class_analisi.png)
+![Component Diagram](./plantuml/analisi/class_analisi.puml)
+
+<!-- ![uml Diagram](./img/uml_class_analisi.png) -->
 
 Il diagramma di classi di analisi rappresenta i principali concetti del dominio e le loro relazioni, senza entrare ancora nei dettagli implementativi o nelle strutture dati specifiche.
 
@@ -536,12 +537,6 @@ Ricapitolando:
 
 
 ### **Sequence Diagram di Analisi**
-
-**Authentication**
-
-<!-- ![Component Diagram](./plantuml/analisi/sequence_auth.puml) -->
-![Component Diagram](./img/uml_sequence_auth_analisi.png)
-
 
 Il diagramma mostra le interazioni principali tra un attore esterno chiamato `UserActor` e un oggetto `User` del sistema durante le operazioni di registrazione, login e logout. L’attore esterno rappresenta l’utente reale che interagisce con il sistema, mentre l’oggetto `User` rappresenta la classe interna del sistema che gestisce le informazioni e le operazioni dell’utente. La **lifeline** dell’oggetto `User` indica la sua esistenza nel corso della sequenza, e lungo questa linea vengono mostrati dei rettangoli chiamati **activation box** che evidenziano il periodo in cui l’oggetto è attivo ed elabora un messaggio.
 
@@ -623,154 +618,66 @@ Il Customer, invece, ha solo la possibilità di cercare proprietà e terminare l
 
 
 
-<!-- ![Component Diagram](./plantuml/design/class_design.puml) -->
-![Component Diagram](./img/uml_class_design.jpeg)
+![Component Diagram](./plantuml/design/class_design.puml)
 
-**Questo diagramma rappresenta l’architettura generale del nostro sistema**, strutturata in più livelli (**layered architecture**).
-Abbiamo separato chiaramente le responsabilità in modo che **ogni parte faccia solo una cosa**:
-**API layer**, **Service layer**, **Domain layer**, **DTO layer**, e **Repository/Storage layer**.
-
-L’obiettivo di questa architettura è **mantenere il codice chiaro, manutenibile e facilmente estendibile**:
-se in futuro cambiamo **database**, **provider di storage** o **sistema di autenticazione**, la logica di business e il dominio restano invariati.
-Ogni livello ha responsabilità ben definite e comunica solo con il livello adiacente.
+![Component Diagram](./img/class_diagram_final.png)
 
 
+Il **Diagramma delle Classi di Design** formalizza il passaggio dal modello concettuale alla specifica tecnica, definendo una struttura software che può essere direttamente implementata. A differenza del modello di analisi, questo include dettagli della soluzione tecnica, raffinando le entità attraverso:
 
-Le **classi API** (`PropertyAPI`, `RoomAPI`, `MediaAPI`, `SearchAPI`, `AuthAPI`) rappresentano il **punto di contatto tra il mondo esterno e il sistema**.
-Nel frontend, possiamo immaginarle come **client REST**: contengono i metodi che inviano richieste HTTP verso il backend (es. `createProperty()`, `getProperty()`, `searchProperties()`), nascondendo i dettagli tecnici delle chiamate di rete.
+- **Tipizzazione e Visibilità:** qui si definiscono con precisione i tipi di dato per gli attributi e i livelli di accesso (public, private, protected) per garantire il corretto incapsulamento e proteggere lo stato interno.  
+- **Firme dei Metodi:** specifica completa delle operazioni, con parametri di input e valori di ritorno, trasformando le descrizioni funzionali in veri contratti software.  
+- **Navigabilità:** le relazioni hanno un verso preciso per stabilire in modo chiaro i riferimenti tra le classi, cosa fondamentale per tradurle in codice e schemi di database.  
 
-Nel **backend**, invece, le API corrispondono agli **endpoint dell’applicazione**: ogni endpoint espone una funzionalità specifica (creazione, aggiornamento, ricerca, ecc.).
-Quando una richiesta arriva, l’endpoint:
+In questa fase, modellare bene le relazioni diventa particolarmente importante: si distingue chiaramente tra **aggregazione** e **composizione** in base a quanto il ciclo di vita delle parti dipende dal tutto, e si usano le **interfacce** per disaccoppiare le specifiche dall'implementazione, favorendo il polimorfismo.
 
-1. **Valida i dati in ingresso**,
-2. **Autentica l’utente** se necessario,
-3. **Delega la logica di business** al Service corrispondente.
+La struttura rispetta rigorosamente la stratificazione definita nell'architettura:
 
-In questo modo, **gli endpoint restano semplici e leggibili**, si limitano a gestire richiesta e risposta mentre **la logica applicativa è centralizzata nei Service**.
+- **API Layer (Client Interface):** classi come `PropertyApi` agiscono come punto di ingresso. Non contengono logica di business, ma si limitano a ricevere i DTO (Data Transfer Objects) di input, invocare i servizi sottostanti e restituire i dati trasformati.  
+- **Service Layer (Business Logic):** è il cuore del sistema. Classi come `PropertyService` orchestrano i flussi operativi. Un aspetto cruciale visibile nel diagramma è che questi servizi dipendono esclusivamente da astrazioni (Interfacce e Classi Astratte) e mai da classi concrete di basso livello, rispettando il **Dependency Inversion Principle**.  
+- **Repository Layer (Data Access):** i repository (es. `PropertyRepository`) incapsulano la complessità delle query al database. Agiscono come una collezione di oggetti in memoria, nascondendo al resto dell'applicazione i dettagli dell'ORM.  
+- **Infrastructure Layer (External Services):** qui risiedono le implementazioni concrete che dialogano con il mondo esterno (AWS S3, Cognito), isolate dal nucleo del sistema tramite pattern specifici.  
 
-
-I **DTO (Data Transfer Object)** servono per **mantenere il dominio pulito e indipendente dai dettagli tecnici**.
-Senza i DTO, le API dovrebbero creare o modificare direttamente le entità del dominio (come `Property` o `User`), esponendole al rischio di essere costruite con **dati incompleti**, **campi non validi** o **formati errati**.
-
-Usando i DTO, invece, **si crea uno strato di sicurezza e separazione**:
-le API ricevono i dati dal mondo esterno (ad esempio un JSON), li mappano su oggetti semplici (`PropertyData`, `UserData`, ecc.), e solo dopo li passano al Service.
-Il Service è l’unico responsabile di **trasformare i DTO in vere entità del dominio**, rispettando **regole, vincoli e logica interna**.
-
-In questo modo:
-
-- **Il dominio è protetto** da input malformati o modifiche accidentali.
-- **Le API restano flessibili**, potendo cambiare formato di input/output senza toccare la logica interna.
-- **I test diventano più semplici**, perché i Service possono essere testati isolatamente con DTO controllati.
-
-I DTO quindi separano **“come i dati arrivano”** da **“come i dati vivono nel dominio”**, mantenendo il codice **sicuro, stabile e facile da evolvere**.
+Un ruolo importante è svolto dai **Data Transfer Objects (DTO)**, rappresentati nel diagramma da classi come `PropertyInput` o `AuthResponse`.  
+A differenza delle Entità (che rispecchiano la struttura del database), i DTO sono oggetti "semplici" privi di comportamento, progettati esclusivamente per trasportare dati tra il client e il server.  
+Il loro utilizzo garantisce un netto disaccoppiamento: permettono di definire un contratto stabile per l'API pubblica (cosa riceve e cosa restituisce il sistema) indipendentemente da come i dati sono strutturati internamente, offrendo inoltre la possibilità di filtrare campi sensibili (come le password) o aggregare informazioni provenienti da più fonti prima di inviarle al client.
 
 
-I **Service** contengono la **logica di business** dell’applicazione.
-Ricevono i DTO, **applicano le regole del dominio** (tramite strategie o validator), **costruiscono gli oggetti di dominio corretti** (eventualmente usando **Builder** o **Factory**) e gestiscono le operazioni complesse come **pubblicazioni, aggiornamenti o upload di media**.
-
-Ogni Service comunica solo con **interfacce astratte** (`IPropertyRepository`, `IMediaStorage`, `IAuthProvider`, ecc.), e non con implementazioni concrete.
-Questo garantisce **basso accoppiamento** e **alta sostituibilità**: possiamo cambiare tecnologia (DB, storage, provider esterno) senza modificare la logica del Service o il dominio.
+Tutti i servizi dipendono da repository e adapter tramite costruttore, implementando un principio di **Dependency Injection**. Questo disaccoppiamento permette di sostituire facilmente le implementazioni concrete con mock o alternative diverse, facilitando i test unitari e rispettando il **Dependency Inversion Principle** di SOLID.  
+I repository stessi seguono il **Repository Pattern**, incapsulando l'accesso al database e fornendo un'interfaccia uniforme per il servizio.  
+L'analisi del diagramma evidenzia l'adozione strategica di pattern "Gang of Four" (GoF) per risolvere problemi ricorrenti di progettazione, migliorando la modularità e la manutenibilità del software.
 
 
 
+##### Factory Method Pattern
 
-**Il Domain layer** contiene le nostre entità principali (`Property`, `Room`, `Media`, `User`).
-Queste classi rappresentano il “cuore” del sistema: hanno metodi e regole che definiscono come devono comportarsi (ad esempio `canBePublished()` o `addRoom()`).
-Non sanno nulla del database o delle API: sono completamente isolate.
+Per la gestione delle **Amenities** (i servizi accessori, come "Wi-Fi" o "Aria Condizionata"), è stato applicato il pattern creazionale **Factory Method**.  
+Il problema affrontato riguarda la necessità di creare oggetti di tipo diverso (servizi legati all'intera proprietà vs servizi legati alla singola stanza) che condividono un'interfaccia comune, senza che il codice client (il Service) debba conoscerne la classe esatta o la logica di inizializzazione.
 
+Come illustrato nel diagramma:
 
+- **Creator (Astratto):** la classe `AmenityFactory` dichiara il metodo astratto di creazione.  
+- **Concrete Creators:** le sottoclassi `PropertyAmenityFactory` e `RoomAmenityFactory` implementano il metodo factory per istanziare rispettivamente oggetti `PropertyAmenity` e `RoomAmenity`.  
+- **Product:** entrambi i tipi di oggetto implementano l'interfaccia comune `IAmenity`.  
 
-**Il Repository/Storage layer** si occupa di salvare e recuperare i dati.
-Abbiamo interfacce come `IPropertyRepository` o `IMediaStorage` e poi implementazioni concrete (`PropertyRepositoryImpl`, `S3MediaStorage`, ecc.).
-Così se un giorno passiamo da un database SQL a uno NoSQL, basta cambiare l’implementazione, non il resto del sistema.
-
-
-
-**Builder Pattern**
-Il **Builder Pattern** è un pattern creazionale che serve per **costruire oggetti complessi passo per passo**, separando la logica di costruzione dalla rappresentazione finale.
-Invece di avere un costruttore con decine di parametri (spesso difficili da leggere o mantenere), il builder fornisce **un’interfaccia fluente** con metodi come `withDescription()`, `addRoom()`, `withStatus()`, ecc.
-Alla fine si chiama un metodo come `build()` per ottenere l’oggetto finale.
-
-Nel nostro caso, lo usiamo per costruire entità del dominio come **`Property`**.
-La classe **`PropertyBuilder`** centralizza tutta la logica di creazione, assicurandosi che la `Property` sia **coerente e valida** prima di restituirla.
-Il **Service** riceve un `PropertyData` (DTO), lo passa al builder, e ottiene una `Property` pronta da salvare o pubblicare.
-Questo approccio è particolarmente utile perché:
-
-- gestisce facilmente **campi opzionali** o **dipendenze tra attributi** (es. una proprietà può avere o meno delle stanze, ma se ne ha, vanno aggiunte correttamente);
-- mantiene **pulita la logica di costruzione**, evitando che il service debba preoccuparsi di dettagli interni.
-
-
-**Factory Method**
-Il **Factory Method Pattern** è un pattern creazionale che definisce **un’interfaccia per creare oggetti**, lasciando però alle sottoclassi la decisione su quale oggetto concreto istanziare.
-Questo evita di usare `new` in giro per il codice e mantiene le dipendenze flessibili.
-
-Nel nostro progetto lo usiamo per gestire la creazione delle **amenity** (i servizi offerti da una proprietà o da una stanza).
-Abbiamo una **interfaccia astratta** `IAmenityFactory` e implementazioni come `PropertyAmenityFactory` e `RoomAmenityFactory`.
-Il vantaggio è che, se vogliamo aggiungere un nuovo tipo di amenity (es. “PetFriendlyAmenity”), ci basta creare una nuova factory **senza modificare il codice esistente**.
-
-Questo rispetta il **principio Open/Closed** (Open for extension, Closed for modification):
-possiamo aggiungere nuove varianti senza toccare le classi già scritte.
-
-
-**Strategy Pattern**
-Lo **Strategy Pattern** è un pattern comportamentale che consente di **definire una famiglia di algoritmi** (strategie), incapsularli in classi separate e renderli **intercambiabili a runtime**.
-L’idea è evitare `if` o `switch` infiniti e rendere il comportamento del sistema flessibile.
-
-Nel nostro dominio lo applichiamo per la **validazione delle entità**.
-Abbiamo un **`ValidatorContext`** che seleziona e usa la giusta strategia di validazione:
-
-- `PropertyValidationStrategy` per le regole sulle proprietà;
-- `RoomValidationStrategy` per le regole sulle stanze.
-
-Ogni strategia implementa le proprie regole, come:
-
-- una **property** non può essere pubblicata senza almeno una stanza;
-- una **room** non può avere **prezzo negativo** o **capacità zero**.
-
-Il vantaggio è che possiamo **aggiungere o modificare regole** semplicemente creando una nuova strategia, senza toccare il codice principale.
-Inoltre, le strategie sono **facilmente testabili** in modo isolato.
+Questa struttura permette di estendere il sistema con nuovi tipi di amenity in futuro (es. "OutdoorAmenity") creando semplicemente una nuova sottoclasse della factory, senza modificare il codice esistente nel Service Layer, rispettando il **Open/Closed Principle**.
 
 
 
-**Bridge Pattern**
-Il **Bridge Pattern** è un pattern strutturale che serve a **separare un’astrazione dalla sua implementazione**, in modo che entrambe possano evolversi indipendentemente.
-È molto utile quando si vuole evitare un’eccessiva dipendenza tra logica e tecnologia.
+##### Adapter Pattern
 
-Nel nostro sistema lo abbiamo usato per la **gestione dei media**.
-La parte astratta è il **`MediaManager`**, che contiene la logica di business: gestisce l’upload dei file, la creazione dei metadati, il collegamento con la `Property`, la generazione di miniature, ecc.
-L’implementazione concreta è definita tramite l’interfaccia **`IMediaStorage`**, che può avere più versioni: `S3Storage`, `OpenStackStorage`, `LocalStorage`, ecc.
+Il pattern strutturale **Adapter** è stato fondamentale per integrare librerie di terze parti (in particolare nel nostro caso i servizi AWS) senza toccare la logica di dominio con dipendenze esterne. L'Adapter agisce come un "traduttore" o "wrapper" tra due interfacce incompatibili: quella richiesta dall'applicazione e quella fornita dalla libreria esterna.
 
-In questo modo, possiamo **cambiare lo storage** (ad esempio passare da AWS S3 ad un altro servizio) senza toccare la logica applicativa.
-Il Bridge Pattern ci permette quindi di mantenere **alta coesione** e **basso accoppiamento** tra logica e tecnologia.
+Nel sistema sono stati implementati due adapter principali:
 
+1. **Storage Adapter:** l'applicazione necessita di salvare file tramite l'interfaccia `IMediaStorage` (Target). La classe `S3MediaStorage` (Adapter) implementa questa interfaccia e al suo interno "traduce" le chiamate verso la libreria `boto3` di AWS (Adaptee).  
+2. **Authentication Adapter:** similmente, l'interfaccia `IAuthProvider` definisce le operazioni di login standard attese dal sistema. La classe `AWSCognitoAuthProvider` adatta queste chiamate alle API complesse di AWS Cognito.  
 
-**MediaManager**
-Il **MediaManager** è un componente **trasversale**, non un semplice service.
-Centralizza tutte le operazioni legate ai file multimediali: **upload, salvataggio, generazione di versioni, collegamento ai domini (`Property`, `Room`) e sincronizzazione con lo storage**.
+L'utilizzo di questo pattern offre un doppio vantaggio:
 
-Grazie al Bridge Pattern, il `MediaManager` si appoggia a un’astrazione (`IMediaStorage`) invece che a un’implementazione specifica.
-Questo significa che il `MediaManager` si occupa **della logica applicativa**, mentre lo storage effettivo (cloud o locale) può cambiare liberamente.
+- Protegge il codice di business dai cambiamenti nelle librerie esterne (**riducendo il Vendor Lock-in**).  
+- Facilita il testing, permettendo di sostituire gli adapter reali con dei "Mock" in fase di test unitario.
 
-
-
-
-
-**Relazioni tra Service e Repository**
-È normale che un service abbia più repository.
-Per esempio, `PropertyService` può usare `IRoomRepository` e `IMediaRepository` perché una property ha stanze e media collegati.
-Questo non è un problema: i service orchestrano le operazioni ma restano indipendenti tra loro.
-Non devono mai chiamarsi direttamente, ma condividere le stesse interfacce.
-
-**Auth Layer**
-`AuthAPI`, `AuthService`, `IAuthProvider`, `AWSCognitoAuthProvider` gestiscono tutta la parte di autenticazione.
-Abbiamo separato la logica applicativa dalla tecnologia usata (es. Cognito), così se domani usiamo un altro provider possiamo sostituirlo facilmente.
-I token vengono gestiti fuori dal dominio, e l’API si occupa solo di validare le richieste tramite header o cookie.
-
-
-
-Le **validazioni (nell'API layer)** controllano il formato e i tipi dei dati in ingresso (es. campi obbligatori, tipo email valida).
-Le **validazioni di business** (nel Service/Domain) applicano invece le regole logiche dell’app (es. non puoi pubblicare una property senza stanze).
-Dividere i due livelli di validazione rende il codice più chiaro e facilita il debugging.
 
 
 ### **Pattern a Microservizi: API Gateway**
@@ -839,8 +746,9 @@ Questo schema chiarisce che **gli endpoint o le API client-side non accedono mai
 
 ### **Component Diagram**
 
-<!-- ![Component Diagram](./plantuml/design/component.puml) -->
-![Component Diagram](./img/uml_component.png)
+![Component Diagram](./plantuml/design/component.puml)
+
+<!-- ![Component Diagram](./img/uml_component.png) -->
 
 Il diagramma rappresenta l’architettura generale del sistema organizzata in **componenti principali**, con chiara separazione dei livelli. I componenti mostrati sono `Application API`, `Service`, `Repository`, `Storage` e `Auth`, e le interfacce `IPropertyRepository`, `IRoomRepository`, `IMediaRepository`, `IMediaStorage` e `IAuthProvider` definiscono i contratti tra i livelli.
 

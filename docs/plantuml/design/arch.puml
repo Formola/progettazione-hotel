@@ -1,0 +1,62 @@
+@startuml final_architecture_complete
+!theme plain
+hide empty members
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+
+skinparam rectangle {
+    RoundCorner 10
+    BorderColor DimGray
+    BorderThickness 1.5
+    BackgroundColor White
+}
+
+top to bottom direction
+
+' --- Layer 1: Presentation ---
+rectangle "1. Presentation Layer" as Layer1 #E3F2FD {
+    rectangle "UI Components" as UI
+    rectangle "API Proxies" as Proxies #BBDEFB
+}
+
+' --- Layer 2: Business Logic ---
+rectangle "2. Business Logic Layer" as Layer2 #FFF3E0 {
+    rectangle "API Routers" as Routers #FFE0B2
+    rectangle "DTOs" as DTOs #FFCC80
+    rectangle "Services" as Services #FFB74D
+}
+
+' --- Layer 3: Domain ---
+rectangle "3. Domain Layer" as Layer3 #D1C4E9 {
+    rectangle "Domain Entities" as Entities #B39DDB
+}
+
+' --- Layer 4: Data Access ---
+rectangle "4. Data Access Layer" as Layer4 #C8E6C9 {
+    rectangle "Repositories" as Repos #A5D6A7
+    rectangle "ORM Models" as Models #81C784
+}
+
+' --- Layer 5: Storage ---
+rectangle "5. Storage Layer" as Layer5 #FFCDD2 {
+    database "Database / Storage" as DB
+}
+
+' --- Forzatura impilamento verticale ---
+Layer1 -[hidden]down-> Layer2
+Layer2 -[hidden]down-> Layer3
+Layer3 -[hidden]down-> Layer4
+Layer4 -[hidden]down-> Layer5
+Models -[hidden]down-> DB
+
+' --- Flussi principali top-down, testo breve ---
+UI -down-> Proxies
+Proxies -down-> Routers : call
+Routers -down-> Services : invoke
+Routers -down-> DTOs : transform
+Services -down-> Layer4
+Services -down-> Layer3 : logic
+Repos -down-> Models : map
+Repos -down-> Layer5
+
+@enduml

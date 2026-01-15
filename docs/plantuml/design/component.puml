@@ -1,53 +1,48 @@
-@startuml component_diagram_clean
-left to right direction
+@startuml component_diagram_refined
+top to bottom direction
 skinparam componentStyle uml2
+skinparam shadowing false
 
 ' ==========================
-' COMPONENTI PRINCIPALI
+' 1. PRESENTATION LAYER
 ' ==========================
-[Application API]<<component>>
-[Service]<<component>>
+[API Layer] <<component>>
 
 ' ==========================
-' INTERFACCIA REPOSITORY/STORAGE
+' 2. APPLICATION / SERVICE LAYER
 ' ==========================
-() "IPropertyRepository" as IPropRepo
-() "IRoomRepository" as IRoomRepo
-() "IMediaRepository" as IMediaRepo
-() "IMediaStorage" as IMediaStorage
-() "IAuthProvider" as IAuthProvider
+[Application Services] <<component>>
 
 ' ==========================
-' IMPLEMENTAZIONI CONCRETE
+' 3. CONTRACTS
 ' ==========================
-[Repository]<<component>>
-[Storage]<<component>>
+package "Data Access Contracts" {
+    () "Repository Interfaces" as IRepository
+}
 
-[Auth]<<component>> 
-
-' ==========================
-' RELAZIONE TRA API E SERVICE
-' ==========================
-[Application API] ..> [Service] : <<REST call>>
-
-' ==========================
-' RELAZIONE SERVICE → INTERFACCE
-' ==========================
-[Service] ..> IPropRepo
-[Service] ..> IRoomRepo
-[Service] ..> IMediaRepo
-[Service] ..> IMediaStorage
-[Service] ..> IAuthProvider
+package "Infrastructure Contracts" {
+    () "Auth Provider Interface" as IAuthProvider
+    () "Media Storage Interface" as IMediaStorage
+}
 
 ' ==========================
-' RELAZIONE INTERFACCIA → IMPLEMENTAZIONE
+' 4. INFRASTRUCTURE
 ' ==========================
-[Repository] -up- IPropRepo
-[Repository] -up- IRoomRepo
-[Repository] -up- IMediaRepo
+[Persistence Layer] <<component>>
+[Auth Adapter (Cognito)] <<component>>
+[Storage Adapter (S3)] <<component>>
 
-[Storage] -up- IMediaStorage
+' ==========================
+' RELAZIONI
+' ==========================
+[API Layer] .down.> [Application Services] : invoke
 
-[Auth] -up- IAuthProvider
+[Application Services] ..> IRepository
+[Application Services] ..> IAuthProvider
+[Application Services] ..> IMediaStorage
+
+[Persistence Layer] -up- IRepository
+[Auth Adapter (Cognito)] -up- IAuthProvider
+[Storage Adapter (S3)] -up- IMediaStorage
 
 @enduml

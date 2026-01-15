@@ -38,6 +38,7 @@ class User:
 
 ## AMENITIES
 
+# <<Product>>
 class IAmenity(ABC):
     """
     Interfaccia base per tutti i servizi (Product Interface).
@@ -58,7 +59,12 @@ class IAmenity(ABC):
     @abstractmethod
     def getCustomDescription(self) -> str:
         pass
+    
+    @abstractmethod
+    def isGlobal(self) -> bool:
+        pass
 
+# <<Concrete Product>>
 @dataclass
 class PropertyAmenity(IAmenity):
     id: str
@@ -80,7 +86,11 @@ class PropertyAmenity(IAmenity):
     
     def getCustomDescription(self) -> str:
         return self.custom_description or ""
+    
+    def isGlobal(self) -> bool:
+        return self.is_global
 
+# <<Concrete Product>>
 @dataclass
 class RoomAmenity(IAmenity):
     id: str
@@ -101,6 +111,9 @@ class RoomAmenity(IAmenity):
     
     def getCustomDescription(self) -> str:
         return self.custom_description or ""
+    
+    def isGlobal(self) -> bool:
+        return self.is_global
     
 ## MEDIA
 

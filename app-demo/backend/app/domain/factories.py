@@ -3,6 +3,8 @@ from typing import Optional
 from app.domain import entities
 
 # ABSTRACT CREATOR
+
+# <<creator>>
 class AmenityFactory(ABC):
     
     @abstractmethod
@@ -23,6 +25,7 @@ class AmenityFactory(ABC):
 
 # CONCRETE CREATORS
 
+# <<concrete creator>>
 class PropertyAmenityFactory(AmenityFactory):
     
     def create_amenity(
@@ -33,7 +36,7 @@ class PropertyAmenityFactory(AmenityFactory):
         description: str = "",
         custom_description: Optional[str] = None,
         is_global: bool = False
-    ) -> entities.PropertyAmenity:
+    ) -> entities.IAmenity:
 
         return entities.PropertyAmenity(
             id=id,
@@ -44,6 +47,7 @@ class PropertyAmenityFactory(AmenityFactory):
             is_global=is_global
         )
 
+# <<concrete creator>>
 class RoomAmenityFactory(AmenityFactory):
     
     def create_amenity(
@@ -54,7 +58,7 @@ class RoomAmenityFactory(AmenityFactory):
         description: str = "",
         custom_description: Optional[str] = None,
         is_global: bool = False
-    ) -> entities.RoomAmenity:
+    ) -> entities.IAmenity:
         
         return entities.RoomAmenity(
             id=id,

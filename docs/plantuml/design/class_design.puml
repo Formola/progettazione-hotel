@@ -1,10 +1,30 @@
-@startuml class_design_final
-left to right direction
+@startuml class_design_optimized
+' --- STILE E CONFIGURAZIONE ---
 skinparam classAttributeIconSize 0
-skinparam linetype polyline
+skinparam linetype ortho
 skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam nodesep 0.6
+skinparam ranksep 0.8
 
-' --- API ---
+' Colori per distinguere i layer visivamente
+skinparam package {
+    BackgroundColor<<API>> HoneyDew
+    BorderColor<<API>> DarkGreen
+    BackgroundColor<<Services>> AliceBlue
+    BorderColor<<Services>> SteelBlue
+    BackgroundColor<<Repos>> LavenderBlush
+    BorderColor<<Repos>> Maroon
+    BackgroundColor<<Domain>> WhiteSmoke
+    BorderColor<<Domain>> Gray
+    BackgroundColor<<Infra>> Ivory
+    BorderColor<<Infra>> DarkGoldenRod
+}
+
+
+' --- DEFINIZIONE DETTAGLI CLASSI (Contenuto Originale) ---
+
+' API
 class AuthApi {
     -service: AuthService
     +login(email: String, password: String): UserData
@@ -25,10 +45,8 @@ class PropertyApi {
     +publishProperty(property_id: String): PropertyData
     +unpublishProperty(property_id: String): PropertyData
     +archiveProperty(property_id: String): PropertyData
-    
     +getRoomsForProperty(property_id: String): RoomData[]
     +addRoomToProperty(property_id: String, data: RoomInput): RoomData
-
     +getAmenityCatalog(): PropertyAmenity[]
 }
 
@@ -36,7 +54,6 @@ class RoomApi {
     +addRoom(property_id: String, data: RoomInput): RoomData
     +updateRoom(room_id: String, data: RoomInput): RoomData
     +deleteRoom(room_id: String): void
-
     +getAmenityCatalog(): RoomAmenity[]
 }
 
@@ -51,7 +68,7 @@ class SearchApi {
     +getPropertyById(property_id: String): PropertyData
 }
 
-' --- SERVICES ---
+' SERVICES
 class AuthService {
     -provider: IAuthProvider
     +login(email: String, password: String): UserData
@@ -109,7 +126,7 @@ class SearchService {
     +search(location: String): List<Dict>
 }
 
-' --- REPOSITORIES ---
+' REPOSITORIES
 class UserRepository {
     -db: Session
     +get_by_cognito_id(cognito_uuid: String): User
@@ -123,9 +140,6 @@ class PropertyRepository {
     +get_by_id(property_id: String): Property
     +get_by_owner_id(owner_id: String): List<Property>
     +delete(property_id: String): void
-    - _sync_amenities(model: PropertyModel <<ORM>>, property_amenity_entities: List<PropertyAmenity>): void
-    - _sync_media_insert(model: PropertyModel <<ORM>>, media_entities: List<Media>): void
-    - _sync_media_update(model: PropertyModel <<ORM>>, media_entities: List<Media>): void
 }
 
 class RoomRepository {
@@ -135,8 +149,6 @@ class RoomRepository {
     +get_by_id(room_id: String): Room
     +get_by_property_id(property_id: String): List<Room>
     +delete(room_id: String): void
-    - _sync_amenities(room_model: RoomModel <<ORM>>, room_amenity_entities: List<RoomAmenity>): void
-    - _sync_media(room_model: RoomModel <<ORM>>, media_entities: List<Media>): void
 }
 
 class MediaRepository {
@@ -169,7 +181,6 @@ class PropertyAmenityRepository {
     +get_by_name(name: String): PropertyAmenity
 }
 
-
 class RoomAmenityRepository {
     -db: Session <<SQLAlchemy>>
     +save(entity: RoomAmenity): RoomAmenity
@@ -178,9 +189,7 @@ class RoomAmenityRepository {
     +get_by_name(name: String): RoomAmenity
 }
 
-
-
-' --- ENTITIES & DTOS ---
+' ENTITIES
 class User {
     +id: String
     +cognito_uuid: String
@@ -205,79 +214,51 @@ class Property {
     +id: String
     +name: String
     +description: String
-    +address: String
-    +city: String
-    +country: String
     +owner: User
     +status: PropertyStatus
     +amenities: List<PropertyAmenity>
     +rooms: List<Room>
     +media: List<Media>
     +publish(): void
-    +can_be_published(): boolean
-    +unpublish(): void
     +archive(): void
     +add_room(room: Room): void
-    +remove_room(room_id: String): void
-    +is_owned_by(user_id: String): boolean
-    +add_amenity(property_amenity: PropertyAmenity, custom_description: String): void
 }
 
 class Room {
     +id: String
     +type: RoomType
     +price: float
-    +capacity: int
     +property_id: String
-    +description: String
-    +is_available: boolean
     +amenities: List<RoomAmenity>
     +media: List<Media>
-    +add_amenity(amenity: RoomAmenity, custom_description: String): void
-    +remove_amenity(room_amenity_id: String): void
-    +update_price(new_price: float): void
+    +add_amenity(amenity: RoomAmenity): void
 }
 
 class Media {
     +id: String
     +file_name: String
     +storage_path: String
-    +description: String
     +file_type: MediaType
 }
 
 interface IAmenity {
     +getName(): String
     +getCategory(): String
-    +getDescription(): String
-    +getCustomDescription(): String
 }
 
 class PropertyAmenity {
     +id: String
     +name: String
     +category: String
-    +description: String
-    +custom_description: String
-    +getName(): String
-    +getCategory(): String
-    +getDescription(): String
-    +getCustomDescription(): String
 }
 
 class RoomAmenity {
     +id: String
     +name: String
     +category: String
-    +description: String
-    +custom_description: String
-    +getName(): String
-    +getCategory(): String
-    +getDescription(): String
-    +getCustomDescription(): String
 }
 
-' --- INFRASTRUCTURE ---
+' INFRA
 interface IAuthProvider {
     +login(email: String, password: String): AuthResponse
     +signup(user: UserData, password: String): AuthResponse
@@ -286,14 +267,11 @@ interface IAuthProvider {
 }
 
 class AWSCognitoAuthProvider {
-    -client: CognitoIdentityProviderClient({region: String, endpoint: String})
-    -clientId: String
-    -userPoolId: String
+    -client: CognitoIdentityProviderClient
     +login(email: String, password: String): AuthResponse
     +signup(user: UserData, password: String): AuthResponse
     +refreshSession(refreshToken: String): AuthResponse
     +logout(): void
-    -mapResponse(response: any): AuthResponse
 }
 
 interface IMediaStorage {
@@ -302,33 +280,33 @@ interface IMediaStorage {
 }
 
 class S3MediaStorage {
-    -s3_client: boto3.client('s3', region_name=String, endpoint_url=String)
-    -bucket_name: String
-    -settings: Settings
+    -s3_client: boto3.client
     +store_media(file_name: String, file_data: bytes, type: String): String
     +delete_media(storage_path: String): void
 }
 
 abstract class AmenityFactory {
-    +create_amenity(id: String, name: String, category: String, description: String, custom_description: String): IAmenity
+    +create_amenity(...): IAmenity
 }
 
 class PropertyAmenityFactory {
-    +create_amenity(id: String, name: String, category: String, description: String, custom_description: String): PropertyAmenity
+    +create_amenity(...): PropertyAmenity
 }
 
 class RoomAmenityFactory {
-    +create_amenity(id: String, name: String, category: String, description: String, custom_description: String): RoomAmenity
+    +create_amenity(...): RoomAmenity
 }
 
+' --- RELAZIONI (Semplificate visivamente, stessa logica) ---
 
-AuthApi --> AuthService
+' 1. AUTH FLOW
+AuthApi ..> AuthService
 AuthService --> IAuthProvider
 IAuthProvider <|.. AWSCognitoAuthProvider
 AWSCognitoAuthProvider --> AuthResponse
-AuthService --> UserData : uses
+AuthService ..> UserData
 AuthService --> UserRepository
-UserRepository --> User
+UserRepository ..> User
 
 ' 2. PROPERTY FLOW 
 PropertyApi ..> PropertyService
@@ -355,11 +333,11 @@ MediaService --> IMediaStorage
 MediaService --> UserRepository
 IMediaStorage <|.. S3MediaStorage
 
-' 5. SEARCH FLOW
+' 5. SEARCH FLOWP
 SearchApi ..> SearchService
 SearchService --> SearchRepository
 
-' 6. ENTITY COMPOSITION & RELATIONS (Right Side)
+' 6. ENTITY COMPOSITION & RELATIONS
 Property "1" *-- "*" Room
 Property "1" o-- "*" Media
 Room "1" o-- "*" Media
@@ -367,12 +345,18 @@ Property --> User : owner
 Property *-- PropertyAmenity
 Room *-- RoomAmenity
 
-' 7. INHERITANCE (Bottom/Detail)
+' 7. INHERITANCE
 AmenityRepository <|-- PropertyAmenityRepository
 AmenityRepository <|-- RoomAmenityRepository
 AmenityFactory <|-- PropertyAmenityFactory
 AmenityFactory <|-- RoomAmenityFactory
 IAmenity <|.. PropertyAmenity
 IAmenity <|.. RoomAmenity
+
+' FORZATURA ORDINE VISIVO (HIDDEN LINKS)
+' Questo trucco forza i layer a stare uno sopra l'altro
+AuthApi -[hidden]-> AuthService
+AuthService -[hidden]-> UserRepository
+UserRepository -[hidden]-> AWSCognitoAuthProvider
 
 @enduml

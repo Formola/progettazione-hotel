@@ -1,0 +1,49 @@
+@startuml AdapterPattern_ObjectAdapter
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+
+' --- CLIENT ---
+class AuthService <<Client>> {
+    +login(email, password)
+    +signup(user, password)
+}
+
+
+' --- TARGET / CLIENT INTERFACE ---
+interface IAuthProvider <<Client Interface>> {
+    +login(email, password): AuthResponse
+    +signup(user, password): AuthResponse
+    +refreshSession(refreshToken): AuthResponse
+    +logout(): void
+}
+
+
+' --- ADAPTER ---
+class AWSCognitoAuthProvider <<Adapter>> {
+    -cognitoClient: CognitoIdentityProviderClient
+    +login(email, password)
+    +signup(user, password)
+    +refreshSession(refreshToken)
+    +logout()
+}
+
+
+' --- SERVICE / ADAPTEE ---
+class CognitoIdentityProviderClient <<Service>> <<aws-sdk-js>> {
+    +authenticate(...)
+    +registerUser(...)
+    +refresh(...)
+    +signOut(...)
+}
+
+
+' --- RELAZIONI ---
+AuthService --> IAuthProvider
+AWSCognitoAuthProvider ..|> IAuthProvider
+AWSCognitoAuthProvider --> CognitoIdentityProviderClient : uses
+
+
+
+@enduml

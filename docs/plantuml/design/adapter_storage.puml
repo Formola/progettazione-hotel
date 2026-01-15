@@ -1,0 +1,32 @@
+@startuml AdapterPattern_ObjectAdapter
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+
+class MediaService <<Client>> {
+    +storeMedia(file_name, file_data, type)
+    +deleteMedia(storage_path)
+}
+interface IMediaStorage <<Client Interface>> {
+    +store_media(file_name, file_data, type): String
+    +delete_media(storage_path): void
+}
+class S3MediaStorage <<Adapter>> {
+    -s3Client: Boto3S3Client <<adaptee>>
+    +store_media(file_name, file_data, type)
+    +delete_media(storage_path)
+}
+
+class Boto3S3Client <<Service>> <<aws-sdk-python>> {
+    +upload_file(...)
+    +delete_file(...)
+}
+
+
+
+MediaService --> IMediaStorage
+S3MediaStorage ..|> IMediaStorage
+S3MediaStorage --> Boto3S3Client : uses
+
+@enduml
