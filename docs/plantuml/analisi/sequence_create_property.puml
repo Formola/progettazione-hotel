@@ -1,33 +1,76 @@
-@startuml sequence_create_property
-actor PropertyOwner
+@startuml sequence_analysis_final_strict
+skinparam actorStyle awesome
+skinparam style strictuml
+skinparam sequenceMessageAlign center
 
-participant PropertyOwner
-participant Property
-participant Room
-participant Media
+' Define participants upfront so all lifelines start from the top
+actor "Property Owner" as Owner
+participant "Property" as Prop
+participant "Room" as Room
+participant "Media" as Media
+participant "PropertyAmenity" as PropAm
+participant "RoomAmenity" as RoomAm
 
-' Creazione nuova proprietà
-PropertyOwner -> Property: addProperty()
-activate Property
+' --- 1. PROPERTY CREATION ---
+Owner -> Prop: create(name, address)
+activate Prop
+Prop --> Owner: propertyInstance (Draft)
+deactivate Prop
 
-Property -> Property: updateProperty()
-Property --> PropertyOwner: propertyCreated
+' --- 2. ADD PROPERTY AMENITIES ---
+Owner -> Prop: addAmenity(amenityData)
+activate Prop
+Prop -> PropAm: create(amenityData)
+activate PropAm
+PropAm --> Prop: amenityInstance
+deactivate PropAm
+Prop --> Owner: amenityAdded
+deactivate Prop
 
-' Gestione stanze inclusa (Add Room/Edit Room)
-PropertyOwner -> Room: addRoom()
-activate Room
-Room -> Room: updateRoom()
-Room --> PropertyOwner: roomCreated
-
-' Upload media associati alla proprietà
-PropertyOwner -> Media: upload()
+' --- 3. ADD PROPERTY MEDIA ---
+Owner -> Prop: addMedia(file)
+activate Prop
+Prop -> Media: upload(file)
 activate Media
-Media --> PropertyOwner: mediaSaved
-
-' Visualizzazione proprietà
-PropertyOwner -> PropertyOwner: viewProperties()
-deactivate Property
-deactivate Room
+Media --> Prop: mediaInstance
 deactivate Media
+Prop --> Owner: mediaAdded
+deactivate Prop
+
+' --- 4. ADD ROOM ---
+Owner -> Prop: addRoom(type, price)
+activate Prop
+Prop -> Room: create(type, price)
+activate Room
+Room --> Prop: roomInstance
+deactivate Room
+Prop --> Owner: roomAdded
+deactivate Prop
+
+' --- 5. ADD ROOM AMENITIES ---
+Owner -> Room: addAmenity(amenityData)
+activate Room
+Room -> RoomAm: create(amenityData)
+activate RoomAm
+RoomAm --> Room: amenityInstance
+deactivate RoomAm
+Room --> Owner: amenityAdded
+deactivate Room
+
+' --- 6. ADD ROOM MEDIA ---
+Owner -> Room: addMedia(file)
+activate Room
+Room -> Media: upload(file)
+activate Media
+Media --> Room: mediaInstance
+deactivate Media
+Room --> Owner: mediaAdded
+deactivate Room
+
+' --- 7. PUBLISH ---
+Owner -> Prop: publish()
+activate Prop
+Prop --> Owner: statusChanged(PUBLISHED)
+deactivate Prop
 
 @enduml

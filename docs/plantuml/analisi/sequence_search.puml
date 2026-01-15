@@ -1,38 +1,29 @@
-@startuml sequence_search
+@startuml sequence_search_strict
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+
 actor User
+participant Property as Prop
+participant Room as R
+participant Media as M
 
-participant Property
-participant Room
-participant Media
 
-' Ricerca proprietà
-User -> Property: searchProperties(criteria)
-activate Property
+User -> Prop: searchProperties(criteria)
+activate Prop
 
-' Ciclo per ogni proprietà trovata
 loop For each property in results
-    Property -> Property: getRooms()
-    activate Property
-    loop For each room in rooms
-        Property -> Room: getRoomDetails()
-        activate Room
-        Room --> Property: roomDetails
-        deactivate Room
-    end
+    Prop -> R: getRoomDetails()
+    activate R
+    R --> Prop: roomDetails
+    deactivate R
 
-    Property -> Property: getPropertyMedia()
-    activate Property
-    loop For each media in media
-        Property -> Media: getMediaDetails()
-        activate Media
-        Media --> Property: mediaDetails
-        deactivate Media
-    end
+    Prop -> M: getPropertyMedia()
+    activate M
+    M --> Prop: mediaDetails
+    deactivate M
 
-    Property --> User: propertyDetails
-    deactivate Property
+    Prop --> User: propertyDetails
 end
 
-deactivate Property
+deactivate Prop
 @enduml
-    

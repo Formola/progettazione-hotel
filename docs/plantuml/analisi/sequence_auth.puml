@@ -1,11 +1,18 @@
-@startuml sequence_auth
+@startuml sequence_auth_strict
+skinparam actorStyle awesome
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+
 actor UserActor as UA
 participant User as U
+
+' Declare lifelines upfront
+
 
 ' Signup
 UA -> U: signup()
 activate U
-U -> U: enterPersonalData()
+U -> U: enterData()
 alt Data valid
     U --> UA: registration confirmed
 else Data invalid

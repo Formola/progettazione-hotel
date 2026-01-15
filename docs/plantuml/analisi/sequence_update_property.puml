@@ -1,43 +1,50 @@
-@startuml   sequence_update_property
-actor PropertyOwner
+@startuml sequence_update_property_final
+skinparam style strictuml
+skinparam sequenceMessageAlign center
 
-participant PropertyOwner
-participant Property
-participant Room
-participant Media
+actor PropertyOwner as Owner
+participant Property as Prop
+participant Room as R
+participant Media as M
+participant PropertyAmenity as PA
+participant RoomAmenity as RA
 
-' Modifica proprietà esistente
-PropertyOwner -> Property: updateProperty()
-activate Property
+' --- Edit Property triggered by Owner ---
+Owner -> Prop: editProperty(details)
+activate Prop
+Prop --> Owner: propertyUpdated
 
-alt Dati validi
-    Property --> PropertyOwner: propertyUpdated
-else Dati non validi
-    Property -> PropertyOwner: showError()
-end
+' --- Manage Property Amenities ---
+Prop -> PA: addOrUpdateAmenity(data)
+activate PA
+PA --> Prop: amenityUpdated
+deactivate PA
 
-opt Gestione Stanze (Add/Edit/Delete)
-    PropertyOwner -> Room: updateRoom()
-    activate Room
-    alt Dati validi
-        Room --> PropertyOwner: roomUpdated
-    else Dati non validi
-        Room -> PropertyOwner: showRoomError()
-    end
-    deactivate Room
-end
+' --- Upload Property Media ---
+Prop -> M: uploadPropertyMedia(file)
+activate M
+M --> Prop: mediaSaved
+deactivate M
 
-opt Upload nuovi media
-    PropertyOwner -> Media: upload()
-    activate Media
-    alt File valido
-        Media --> PropertyOwner: mediaSaved
-    else File non valido o troppo grande
-        Media --> PropertyOwner: showMediaError()
-    end
-    deactivate Media
-end
+' --- Manage Rooms ---
+Prop -> R: updateRoom(details)
+activate R
+R --> Prop: roomUpdated
 
-PropertyOwner -> PropertyOwner: viewProperties()
-deactivate Property
+' --- Manage Room Amenities ---
+R -> RA: addOrUpdateAmenity(data)
+activate RA
+RA --> R: roomAmenityUpdated
+deactivate RA
+
+' --- Upload Room Media ---
+R -> M: uploadRoomMedia(file)
+activate M
+M --> R: mediaSaved
+deactivate M
+
+deactivate R
+deactivate Prop
+
+Owner -> Owner: viewProperties()
 @enduml

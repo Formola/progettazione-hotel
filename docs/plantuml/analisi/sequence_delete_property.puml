@@ -1,40 +1,60 @@
-@startuml sequence_delete_property
-actor PropertyOwner
+@startuml sequence_delete_property_final
+skinparam style strictuml
+skinparam sequenceMessageAlign center
 
-participant PropertyOwner
-participant Property
-participant Room
-participant Media
+actor PropertyOwner as Owner
+participant Property as Prop
+participant Room as R
+participant Media as M
+participant PropertyAmenity as PA
+participant RoomAmenity as RA
 
-' Inizio delete property
-PropertyOwner -> Property: deleteProperty()
-activate Property
+' --- Delete Property triggered by Owner ---
+Owner -> Prop: deleteProperty()
+activate Prop
 
-' Eliminazione media associati alla property
-loop For each media of property
-    Property -> Media: deleteMedia()
-    activate Media
-    Media --> Property: deleted
-    deactivate Media
+' --- Delete Property Amenities ---
+loop For each property amenity
+    Prop -> PA: deleteAmenity()
+    activate PA
+    PA --> Prop: deleted
+    deactivate PA
 end
 
-' Eliminazione stanze associate e dei loro media
-loop For each room of property
-    Property -> Room: deleteRoom()
-    activate Room
+' --- Delete Property Media ---
+loop For each media of property
+    Prop -> M: deletePropertyMedia()
+    activate M
+    M --> Prop: deleted
+    deactivate M
+end
 
-    loop For each media of room
-        Room -> Media: deleteMedia()
-        activate Media
-        Media --> Room: deleted
-        deactivate Media
+' --- Delete Rooms ---
+loop For each room of property
+    Prop -> R: deleteRoom()
+    activate R
+
+    ' Delete Room Amenities
+    loop For each room amenity
+        R -> RA: deleteAmenity()
+        activate RA
+        RA --> R: deleted
+        deactivate RA
     end
 
-    Room --> Property: roomDeleted
-    deactivate Room
+    ' Delete Room Media
+    loop For each media of room
+        R -> M: deleteRoomMedia()
+        activate M
+        M --> R: deleted
+        deactivate M
+    end
+
+    R --> Prop: roomDeleted
+    deactivate R
 end
 
-' Eliminazione della property stessa
-Property --> PropertyOwner: propertyDeleted
-deactivate Property
+' --- Finalize ---
+Prop --> Owner: propertyDeleted
+deactivate Prop
 @enduml

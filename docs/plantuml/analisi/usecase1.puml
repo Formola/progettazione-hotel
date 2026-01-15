@@ -1,87 +1,163 @@
-    @startuml usecase1
-    left to right direction
-    skinparam packageStyle rectangle
+@startuml usecase_diagram
+top to bottom direction
+skinparam packageStyle rectangle
+skinparam usecase {
+    BackgroundColor White
+    BorderColor Black
+    ArrowColor Black
+    Shadowing false
+}
 
-    ' Actors
-    actor "User" as User
-    actor "Customer" as Customer
-    actor "Property Owner" as Owner
-    actor "Authenticated User" as AuthUser
+' 1. ACTORS
+actor "Guest" as Guest
+actor "Auth User" as AuthUser
+actor "Owner" as Owner
+actor "Booker" as Booker
 
-    ' Actor hierarchy
-    User <|-- Customer
-    User <|-- Owner
-    Customer <|-- AuthUser
-    Owner <|-- AuthUser
+Guest <|-- AuthUser
+AuthUser <|-- Owner
+AuthUser <|-- Booker
 
-    ' Authentication package
-    package "Authentication" {
-        (SignUp)
-        (Login)
-        (Logout)
-        (Enter Personal Data)
+' 2. LEFT COLUMN
+
+package "Authentication" as PkgAuth {
+    (Sign Up)
+    (Login)
+    (Logout)
+    (Sign Up) -[hidden]down-> (Login)
+    (Login) -[hidden]down-> (Logout)
+}
+
+package "Property Search" as PkgSearch {
+    (Search Property)
+    (View Property Details)
+    (Filter Results)
+    (Search Property) -[hidden]down-> (View Property Details)
+    (View Property Details) -[hidden]down-> (Filter Results)
+}
+
+' QUESTI ORA SONO A SINISTRA (SOTTO SEARCH)
+package "Media Management" as PkgMedia {
+    (Manage Media) as ManageMedia
+    (Upload Media)
+    (Delete Media)
+}
+
+package "Room Management" as PkgRoom {
+    (Manage Rooms)
+    (Add Room)
+    (Edit Room)
+    (Delete Room)
+    (Manage Room Content) as MngRoomCont
+    (Add/Edit Basic Room Details) as BasicRoomDetails
+}
+
+' 3. RIGHT COLUMN
+
+package "Property Management" as PkgProp {
+    (Access Owner Dashboard) as Dashboard
+    (Create New Property) as CreateProp
+    (Edit Property) as EditProp
+    (Delete Property)
+    (Manage Property Content) as MngPropCont
+    (Add/Edit Basic Details) as BasicDetails
+    
+    Dashboard -[hidden]down-> CreateProp
+    CreateProp -[hidden]down-> EditProp
+}
+
+package "Amenities Management" as PkgAmen {
+    rectangle "Property Amenities" {
+        (Manage Property Amenities) as ManagePropAm
+        (Add Property Amenity) as AddPropAm
+        (Delete Property Amenity) as DelPropAm
+        (Add Custom Property Amenity) as CustPropAm
+        ManagePropAm -[hidden]down-> AddPropAm
+        AddPropAm -[hidden]down-> DelPropAm
+        DelPropAm -[hidden]down-> CustPropAm
     }
-
-    ' Property Management package
-    package "Property Management" {
-        (Create New Property)
-        (Update Existing Property)
-        (Delete Property)
-        (View Property List)
-        (Manage Rooms)
-        (Upload Media)
+    
+    rectangle "Room Amenities" {
+        (Manage Room Amenities) as ManageRoomAm
+        (Add Room Amenity) as AddRoomAm
+        (Delete Room Amenity) as DelRoomAm
+        (Add Custom Room Amenity) as CustRoomAm
+        ManageRoomAm -[hidden]down-> AddRoomAm
+        AddRoomAm -[hidden]down-> DelRoomAm
+        DelRoomAm -[hidden]down-> CustRoomAm
     }
+}
 
-    ' Room Management package
-    package "Room Management" {
-        (Add Room)
-        (Edit Room)
-        (Delete Room)
-    }
+' 4. LAYOUT GRID
 
-    ' Property Search package
-    package "Property Search" {
-        (Search Property)
-        (View Property Details)
-        (Filter Results)
-    }
-
-    ' Relations: Authentication
-    User --> (SignUp)
-    User --> (Login)
-    AuthUser --> (Logout)
-
-    (SignUp) ..> (Enter Personal Data) : <<include>>
-
-    ' Relations: Property Management (only Authenticated Owner)
-    AuthUser --> (View Property List)
-    AuthUser --> (Create New Property)
-    AuthUser --> (Update Existing Property)
-
-    (Create New Property) ..> (Manage Rooms) : <<include>>
-    (Create New Property) ..> (Upload Media) : <<extend>>
-
-    (Update Existing Property) ..> (Delete Property) : <<extend>>
-    (Update Existing Property) ..> (Manage Rooms) : <<include>>
-    (Update Existing Property) ..> (Upload Media) : <<extend>>
+' Colonna Sinistra: Auth -> Search
+PkgAuth -[hidden]down-> PkgSearch
 
 
-    (Manage Rooms) ..> (Add Room) : <<include>>
-    (Manage Rooms) ..> (Edit Room) : <<include>>
-    (Manage Rooms) ..> (Delete Room) : <<include>>
+PkgSearch -[hidden]down---> PkgRoom 
 
-    ' Relations: Property Search (all users can search)
-    User --> (Search Property)
-    ' Authenticated users can also search
-    AuthUser --> (Search Property)
+' Room sotto Media
+PkgMedia -[hidden]up-> PkgProp
 
-    (Search Property) ..> (View Property Details) : <<include>>
-    (Search Property) ..> (Filter Results) : <<extend>>
 
-    ' Note: Booking not modeled
-    note right of Customer
-    Customers may eventually book properties, 
-    but booking is not modeled in this diagram.
-    end note
+' Colonna Destra: Property a destra di Auth/Search
+PkgAuth -[hidden]right-> PkgProp
 
-    @enduml
+' Amenities a destra di Property
+PkgProp -[hidden]right-> PkgAmen
+
+' 5. RELATIONS
+
+' --- Auth ---
+Guest --> (Sign Up)
+Guest --> (Login)
+AuthUser --> (Logout)
+
+' --- Search ---
+Guest --> (Search Property)
+'extend per View Details
+(Search Property) <.. (View Property Details) : <<extend>>
+(Filter Results) ..> (Search Property) : <<extend>>
+
+' --- Property Flow ---
+Owner --> Dashboard
+Dashboard <.. CreateProp : <<extend>>
+Dashboard <.. EditProp : <<extend>>
+Dashboard <.. (Delete Property) : <<extend>>
+CreateProp <.. MngPropCont : <<extend>>
+EditProp <.. MngPropCont : <<extend>>
+BasicDetails <.. MngPropCont : <<include>>
+
+' --- Media Connections ---
+' Le frecce andranno da Destra (Prop) a Sinistra (Media)
+MngPropCont ..> ManageMedia : <<include>>
+MngRoomCont ..> ManageMedia : <<include>>
+
+' Logic Media con extend
+ManageMedia <.. (Upload Media) : <<extend>>
+ManageMedia <.. (Delete Media) : <<extend>>
+
+' --- Room Flow ---
+' Le frecce andranno da Destra (Prop) a Sinistra (Room)
+EditProp <.. (Manage Rooms) : <<extend>>
+(Manage Rooms) <.. (Add Room) : <<extend>>
+(Manage Rooms) <.. (Edit Room) : <<extend>>
+(Manage Rooms) <.. (Delete Room) : <<extend>>
+(Add Room) <.. MngRoomCont : <<extend>>
+(Edit Room) <.. MngRoomCont : <<extend>>
+BasicRoomDetails <.. MngRoomCont : <<include>>
+
+' --- Amenities Connections ---
+MngPropCont ..> ManagePropAm : <<include>>
+MngRoomCont ..> ManageRoomAm : <<include>>
+
+' Logic Amenities
+ManagePropAm <.. AddPropAm : <<extend>>
+ManagePropAm <.. DelPropAm : <<extend>>
+AddPropAm <.. CustPropAm : <<extend>>
+
+ManageRoomAm <.. AddRoomAm : <<extend>>
+ManageRoomAm <.. DelRoomAm : <<extend>>
+AddRoomAm <.. CustRoomAm : <<extend>>
+
+@enduml

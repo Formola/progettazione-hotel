@@ -1,64 +1,118 @@
-@startuml class_analysis
-left to right direction
+@startuml class_analysis_final
+top to bottom direction
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam shadowing false
+
+' SPAZIATURA CRUCIALE: Aumenta questi valori se le etichette si toccano
+skinparam nodesep 120
+skinparam ranksep 80
+
+
+' --- 1. ABSTRACT & ACTORS ---
 
 class User {
-    +name
-    +email
+    +name: String
+    +email: String
     +login()
     +logout()
     +register()
 }
 
 class PropertyOwner {
-    +paymentInfo
     +addProperty()
     +updateProperty()
     +deleteProperty()
-    +viewProperties()
+    +viewDashboard()
 }
 
 class Customer {
-    +preferences
     +searchProperties()
-    +filterProperties()
+    +filterResults()
     +viewPropertyDetails()
 }
 
 User <|-- PropertyOwner
 User <|-- Customer
 
+' --- 2. DOMAIN ENTITIES ---
+
 class Property {
-    +name
-    +address
-    +description
-    +propertyAmenities
-    +updateDetails()
-    +generateSnapshot()
+    +name: String
+    +city: String
+    +address: String
+    +description: String
+    +publish()
+    +archive()
+    +addRoom()
+    +addMedia()
+    +addAmenity()
 }
 
 class Room {
-    +type
-    +price
-    +capacity
-    +roomAmenities
-    +availability
+    +type: String
+    +price: Float
+    +capacity: Int
+    +isAvailable: Boolean
     +updateDetails()
+    +addMedia()
+    +addAmenity()
 }
 
 class Media {
-    +filePath
-    +mediaType
-    +description
+    +fileName: String
+    +fileType: String
+    +storagePath: String
     +upload()
     +delete()
 }
 
-PropertyOwner "1" --> "*" Property : owns
-Property "1" *-- "*" Room : contains
-Property "1" *-- "*" Media : has
-Room "1" *-- "*" Media : has
+' --- 3. AMENITIES ---
 
-Customer --> "*" Property : views
+interface IAmenity {
+    +get_name(): String
+    +get_category(): String
+    +get_description(): String
+    +get_custom_description(): String
+}
+
+class PropertyAmenity {
+    +name: String
+    +category: String
+    +description: String
+    +customDescription: String
+}
+
+class RoomAmenity {
+    +name: String
+    +category: String
+    +description: String
+    +customDescription: String
+}
+
+IAmenity <|.. PropertyAmenity
+IAmenity <|.. RoomAmenity
+
+' --- 4. RELATIONS STRATEGICHE ---
+
+' Flusso Verticale Principale
+PropertyOwner "1" -down-> "*" Property : manages 
+Property "1" *-down- "*" Room : contains 
+
+' Customer visualizza (da destra o sinistra non importa, ma usiamo dotted)
+Customer .down.> "*" Property : views 
+    
+' Media sempre a DESTRA
+Property "1" o-right- "*" Media : has gallery 
+Room "1" o-right- "*" Media : has gallery 
+
+' Amenities sempre a SINISTRA
+Property "1" o-left- "*" PropertyAmenity : offers 
+Room "1" o-left- "*" RoomAmenity : equipped with 
+
+' Allineamenti forzati (Layout Fixes)
+' Questo forza User sopra Property, e Property sopra Room
+User -[hidden]down-> Property
+Property -[hidden]down-> Room
 
 @enduml
