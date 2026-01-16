@@ -266,7 +266,7 @@ La configurazione di LocalStack può essere gestita tramite Docker Compose, defi
 Cominciamo da un diagramma dei casi d'uso (use case diagram) per il sottosistema di onboarding delle proprietà.
 
 <!-- ![Component Diagram](./plantuml/analisi/usecase1.puml) -->
-![uml Diagram](./img/uml_use_case.png)
+![uml Diagram](./img/usecase_diagram.png)
 
 Il diagramma dei casi d’uso rappresenta le funzionalità principali del sottosistema di **onboarding delle proprietà** e della **ricerca delle proprietà**, mettendo in evidenza i diversi tipi di utenti e i permessi associati a ciascuno.
 
@@ -563,15 +563,15 @@ Infine, l’owner può visualizzare la lista delle proprietà tramite il metodo 
 
 **Update Existing Property**
 
-<!-- ![Component Diagram](./plantuml/analisi/sequence_update_property.puml) -->
-![Component Diagram](./img/uml_sequence_update_analisi.png)
+![Component Diagram](./plantuml/analisi/sequence_update_property.puml)
+<!-- ![Component Diagram](./img/uml_sequence_update_analisi.png) -->
 
 In questo scenario, l’owner invia una richiesta di aggiornamento alla proprietà esistente. Property esegue updateProperty() e risponde confermando l’aggiornamento. Successivamente l’owner può gestire le stanze tramite updateRoom(), e infine caricare eventuali nuovi media. La sequenza termina con la visualizzazione aggiornata delle proprietà dall’owner.
 
 **Delete Property**
 
-<!-- ![Component Diagram](./plantuml/analisi/sequence_delete_property.puml) -->
-![Component Diagram](./img/uml_sequence_delete_analisi.png)
+![Component Diagram](./plantuml/analisi/sequence_delete_property.puml)
+<!-- ![Component Diagram](./img/uml_sequence_delete_analisi.png) -->
 
 Il diagramma mostra come un **Property Owner** elimina una proprietà dal sistema. L’owner avvia l’operazione chiamando il metodo `deleteProperty()` sulla property desiderata. Prima di cancellare la property stessa, vengono rimossi tutti i media ad essa associati: la property chiama `delete()` su ciascun media e riceve conferma della cancellazione. Successivamente, tutte le stanze collegate alla property vengono rimosse; per ciascuna stanza, la property invoca `deleteRoom()`, che a sua volta cancella tutti i media associati alla stanza. Una volta completata la rimozione dei media di ogni stanza, la stanza stessa viene eliminata e conferma la sua cancellazione alla property. Quando tutte le stanze e tutti i media sono stati rimossi, la property viene definitivamente cancellata e restituisce al Property Owner la conferma `propertyDeleted`, completando l’intera operazione di eliminazione.
 
@@ -579,8 +579,8 @@ Il diagramma mostra come un **Property Owner** elimina una proprietà dal sistem
 
 **Search Property**
 
-<!-- ![Component Diagram](./plantuml/analisi/sequence_search.puml) -->
-![Component Diagram](./img/uml_sequence_search_analisi.png)
+![Component Diagram](./plantuml/analisi/sequence_search.puml)
+<!-- ![Component Diagram](./img/uml_sequence_search_analisi.png) -->
 
 In questo scenario, l’utente avvia la ricerca delle proprietà tramite il metodo `searchProperties()` definito nella classe `User`. Questo metodo accetta i criteri di ricerca, come località, date o preferenze, e restituisce l’elenco delle proprietà corrispondenti. Per ogni proprietà trovata, il sistema chiama internamente i metodi `getRooms()` e `getMedia()` della classe `Property` per recuperare rispettivamente l’elenco delle stanze e dei media associati alla proprietà.
 
@@ -654,6 +654,9 @@ L'analisi del diagramma evidenzia l'adozione strategica di pattern "Gang of Four
 Per la gestione delle **Amenities** (i servizi accessori, come "Wi-Fi" o "Aria Condizionata"), è stato applicato il pattern creazionale **Factory Method**.  
 Il problema affrontato riguarda la necessità di creare oggetti di tipo diverso (servizi legati all'intera proprietà vs servizi legati alla singola stanza) che condividono un'interfaccia comune, senza che il codice client (il Service) debba conoscerne la classe esatta o la logica di inizializzazione.
 
+![Component Diagram](./plantuml/design/factory_method.puml)
+
+
 Come illustrato nel diagramma:
 
 - **Creator (Astratto):** la classe `AmenityFactory` dichiara il metodo astratto di creazione.  
@@ -667,6 +670,10 @@ Questa struttura permette di estendere il sistema con nuovi tipi di amenity in f
 ##### Adapter Pattern
 
 Il pattern strutturale **Adapter** è stato fondamentale per integrare librerie di terze parti (in particolare nel nostro caso i servizi AWS) senza toccare la logica di dominio con dipendenze esterne. L'Adapter agisce come un "traduttore" o "wrapper" tra due interfacce incompatibili: quella richiesta dall'applicazione e quella fornita dalla libreria esterna.
+
+![Component Diagram](./plantuml/design/adapter_auth.puml)
+![Component Diagram](./plantuml/design/adapter_storage.puml)
+
 
 Nel sistema sono stati implementati due adapter principali:
 
@@ -714,8 +721,8 @@ Inoltre, il gateway gestisce le **autenticazioni e autorizzazioni**, quindi solo
 
 ### **Package Diagram di Design**
 
-<!-- ![Component Diagram](./plantuml/design/package.puml) -->
-![Component Diagram](./img/uml_package.png)
+![Component Diagram](./plantuml/design/package.puml)
+<!-- ![Component Diagram](./img/uml_package.png) -->
 
 
 Un **package diagram** è uno strumento UML usato per **raggruppare e organizzare elementi del modello** in insiemi logici (**package**). Serve a **visualizzare le dipendenze ad alto livello** tra i vari pezzi del sistema, riducendo il rumore dei dettagli implementativi.
@@ -769,66 +776,125 @@ In questo modo il diagramma comunica chiaramente **come i componenti interagisco
 
 
 
-### **Design of the Onboarding Database**
+# Progettazione del Database
 
-![modello ER Onboarding Database](./database/er.png)
+In questa sezione vediamo la progettazione del database relazionale realizzato per il sistema di onboarding delle proprietà e per la ricerca. Il processo ha seguito le classiche fasi: concettuale, logica e fisica. Come DBMS è stato scelto PostgreSQL su AWS RDS.
 
-![modello ER Onboarding Database](./database/logico.png)
+## Progettazione Concettuale
 
+L'obiettivo della progettazione concettuale è tradurre i requisiti informativi in una rappresentazione chiara della realtà, indipendente dalla tecnologia. Gli elementi principali sono:
 
-Abbiamo scelto un database relazionale per il nostro progetto perché i dati dell’applicazione presentano caratteristiche tipiche di scenari relazionali: entità distinte con attributi ben definiti, relazioni complesse tra entità, e la necessità di garantire integrità e coerenza.
+- **Entità e Attributi:** le entità rappresentano classi di oggetti con caratteristiche comuni, descritte tramite *attributi* con un proprio dominio di valori.
+- **Chiavi:** tra gli attributi si individuano le *chiavi candidate*, cioè gli insiemi minimi di attributi che identificano univocamente un’istanza. Tra queste si sceglie la *chiave primaria*.
+- **Associazioni e Cardinalità:** le connessioni tra entità si chiamano *associazioni* e sono regolate da vincoli di *cardinalità* (min/max), che indicano se la relazione è 1:1, 1:N o N:M.
 
+Il principale strumento in questa fase è il **Diagramma Entità-Relazione (E-R)**, dove rettangoli rappresentano le entità, rombi le associazioni e le linee mostrano cardinalità e gerarchie. Dal diagramma emergono alcune scelte di modellazione:
 
-- **Utenti e proprietà**: ogni utente può possedere più proprietà, ma ogni proprietà appartiene a un solo utente. Questa relazione uno-a-molti è facilmente rappresentabile tramite chiavi esterne, e garantisce che una proprietà non possa esistere senza un proprietario valido.
-- **Proprietà e stanze**: una proprietà può avere diverse stanze, ognuna con caratteristiche proprie (tipo, prezzo, capacità, disponibilità). Anche qui, la relazione uno-a-molti consente query semplici per recuperare tutte le stanze di una proprietà e aggiornamenti coerenti se la proprietà viene modificata o eliminata.
-- **Media associati a proprietà e stanze**: ogni file multimediale può appartenere a una proprietà o a una stanza. Utilizzare un database relazionale ci permette di definire chiaramente queste associazioni e vincolare la presenza di media solo a entità esistenti.
-- **Amenities e relazioni molti-a-molti**: sia le proprietà che le stanze possono avere diverse amenities, e ogni amenity può essere condivisa da più proprietà o stanze. Le tabelle associative permettono di gestire queste relazioni in maniera chiara e scalabile, senza duplicare dati.
+![Diagramma ER](./database/er.png)  
+*Figura: Diagramma Entità-Relazione per il sottosistema di Onboarding delle Proprietà.*
 
-In scenari non relazionali (NoSQL), dovremmo replicare dati o utilizzare strutture nidificate, complicando query complesse come “tutte le stanze con amenity X di proprietà di un certo utente” o “tutti i media associati a una stanza specifica”. Il database relazionale rende queste query naturali e performanti.
+- **Gerarchia Proprietario-Struttura:** l’entità *USER* è collegata a *PROPERTY* tramite *OWNS*. La cardinalità (1,1) lato proprietà significa che ogni struttura deve avere un proprietario, mentre (0,N) lato utente indica che un account può gestire più proprietà o nessuna.
 
+- **Composizione della Proprietà:** *CONTAINS* collega *PROPERTY* a *ROOM*. La cardinalità (1,1) per la stanza indica che non può esistere senza la proprietà, mentre (1,N) per la proprietà indica che deve avere almeno una stanza.
 
+- **Gestione dei Servizi:** le entità *PROPERTY_AMENITY* e *ROOM_AMENITY* sono specializzazioni di *AMENITY*. Così si distinguono i servizi dell’intera struttura (es. Wi-Fi, Piscina) da quelli delle singole stanze (es. Asciugacapelli, Culla), evitando duplicazioni. Entrambe sono collegate tramite relazioni molti-a-molti *OFFERS*.
 
-**Fasi del progetto del database**
+- **Media:** l’entità *MEDIA* è collegata sia a *PROPERTY* che a *ROOM* tramite *HAS_MEDIA*, così foto e video possono riferirsi alla struttura o alle singole stanze. Ogni media appartiene a una sola entità.
 
-1. **Analisi dei requisiti**: identificazione delle entità principali (utenti, proprietà, stanze, media, amenities), dei loro attributi e delle regole di business principali.
-2. **Definizione delle relazioni**: individuazione delle associazioni tra entità (uno-a-molti, molti-a-molti) e dei vincoli necessari per mantenere l’integrità dei dati.
-3. **Modello concettuale (ER)**: rappresentazione grafica delle entità come rettangoli  e delle associazioni come rombi. Si sono definite le cardinalità (es. 0..N per amenities) e generalizzazioni, come l’entità astratta **Amenity**, da cui derivano **PropertyAmenity** e **RoomAmenity**.
-4. **Modello logico**: traduzione del modello concettuale in tabelle relazionali, chiavi primarie e chiavi esterne. Le relazioni uno-a-molti sono implementate tramite chiavi esterne, mentre le relazioni molti-a-molti tramite tabelle associative (link). Attributi come `created_at` o `inserted_at` sono stati aggiunti per tracciare le informazioni temporali, mentre campi come `category` nelle amenities consentono una classificazione utile alle query.
+## Progettazione Logica
 
+La **progettazione logica** converte lo schema concettuale in un modello relazionale pronto per il DBMS. Lo schema definisce tabelle, **chiavi primarie**, vincoli e relazioni.
 
-**Modello concettuale (ER)**
+Ogni entità è stata trasformata in tabella, normalizzando gli attributi e usando chiavi artificiali (ID), mentre le chiavi naturali sono vincoli di unicità. Le gerarchie di generalizzazione sono state appiattite secondo i pattern di accesso. Le regole principali per le relazioni:
 
-- **Entità principali**: `User`, `Property`, `Room`, `Media`, `PropertyAmenity`, `RoomAmenity`.
-- **Attributi chiave**: identificatori univoci per ogni entità, campi descrittivi come nome, descrizione, tipo, prezzo, città, paese.
-- **Relazioni**:
+- N:M → tabelle associative  
+- 1:N → chiave esterna nel lato “molti”  
+- 1:1 → valutata caso per caso
 
-  - **User → Property**: uno-a-molti, “owns”.
-  - **Property → Room**: uno-a-molti, “contains”.
-  - **Property → PropertyAmenity**: molti-a-molti, “offers”, tramite losanga e frecce con cardinalità (0,N)-(0,N).
-  - **Room → RoomAmenity**: molti-a-molti, “offers”, stesso schema.
-  - **Property/Room → Media**: uno-a-molti, “has_media”.
-- **Generalizzazione**: entità astratta **Amenity** da cui derivano PropertyAmenity e RoomAmenity, condividendo attributi comuni.
+![Modello Logico](./database/logico.png)  
+*Figura: Modello Logico Relazionale del database.*
 
+Trasformazioni principali dal modello E-R a quello logico:
 
-**Modello logico**
+- **Mappatura 1:N:** relazioni gerarchiche come *User-Property* e *Property-Room* diventano chiave esterna nell’entità “debole” (**rooms.property_id**).
 
-- **Trasformazione del concettuale in tabelle**: ogni entità diventa una tabella, ogni attributo diventa una colonna.
-- **Relazioni uno-a-molti**: implementate tramite chiavi esterne nella tabella figlia (es. `property_id` in `rooms`).
-- **Relazioni molti-a-molti**: implementate tramite tabelle associative (`property_amenities_link`, `room_amenities_link`) con chiavi composte e riferimenti alle entità correlate.
+- **Risoluzione N:M:** le relazioni *Offers* diventano tabelle associative **property_amenities_link** e **room_amenities_link**, che contengono coppie di chiavi esterne e attributi della relazione (**custom_description**).
 
+- **Gestione della Generalizzazione:** la gerarchia dei servizi è risolta con "Table per Concrete Class", creando **property_amenities** e **room_amenities** separate, semplificando le query.
 
-**Progettazione fisica (PostgreSQL su RDS/Aurora):**
-In questa fase traduciamo il modello logico in una struttura concreta che sarà effettivamente salvata nel database.
+- **Relazione Esclusiva Media:** *media* ha due colonne nullable **property_id** e **room_id**, con vincolo che può riferirsi solo a una delle due.
 
-- Ogni tabella ha **tipi di campo adeguati**: UUID per gli ID, VARCHAR/TEXT per nomi e descrizioni, TIMESTAMP per date, NUMERIC per prezzi e valori numerici.
-- Le **foreign key (FK)** garantiscono l’integrità referenziale tra le tabelle, assicurando che i collegamenti tra proprietà, stanze, media e amenities siano coerenti.
-- Creiamo **indici mirati** per ottimizzare le query più importanti degli utenti:
+## Progettazione Fisica
 
-  - `properties(city, country, status)` → permette di filtrare velocemente le proprietà per città, paese o stato.
-  - `rooms(property_id)` → consente di recuperare rapidamente tutte le stanze associate a una specifica proprietà.
-  - `property_amenities_link(property_id)` e `room_amenities_link(room_id)` → velocizzano la ricerca delle amenities collegate a una proprietà o a una stanza.
+La progettazione fisica traduce lo schema logico in direttive specifiche per PostgreSQL. Si definiscono tipi fisici (*VARCHAR*, *TIMESTAMP*), vincoli e strutture di accesso (indici).
 
-Gli indici sono scelti **solo per le query critiche di ricerca**, così da migliorare le prestazioni senza appesantire il database con indici inutili.
+Lo script *schema.sql* crea tutte le tabelle. Grazie a **ON DELETE CASCADE**, eliminando una proprietà vengono rimosse automaticamente tutte le entità dipendenti, evitando record orfani.
+
+### Strategia di Indicizzazione Semplificata
+
+Per migliorare le prestazioni delle query si è usata una strategia ibrida:
+
+- **Indici B-Tree:** ottimi per ricerche, insert e ordinamenti (O(log n)), applicati su colonne di JOIN e filtri esatti, come tutte le chiavi esterne e **status** in *properties*.  
+
+- **Indici GIN con Trigram:** necessari per ricerche testuali con *ILIKE '%pattern%'*. L’estensione **pg_trgm** divide le stringhe in trigrammi, e l’indice GIN memorizza quali righe contengono quali trigrammi, velocizzando le ricerche su grandi dataset. Applicati su **city** e **name**.
+
+```sql
+-- Abilita estensione trigram
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+-- Indice trigram su city
+CREATE INDEX idx_properties_city_trgm 
+   ON properties USING gin (city gin_trgm_ops);
+-- Indice trigram su name
+CREATE INDEX idx_properties_name_trgm 
+   ON properties USING gin (name gin_trgm_ops);
+```
+
+Query di ricerca usando B-Tree e GIN:
+
+```sql
+SELECT p.id, p.name, p.address, p.city, p.country, p.description
+FROM properties p
+WHERE p.status = 'PUBLISHED'   -- Usa idx_properties_status (B-Tree)
+  AND (p.city ILIKE '%roma%'   -- Usa idx_properties_city_trgm (GIN)
+       OR p.name ILIKE '%roma%') -- Usa idx_properties_name_trgm (GIN)
+ORDER BY p.created_at DESC
+LIMIT 50;
+```
+
+Query per recuperare entità correlate:
+
+```sql
+-- Recupera stanze (usa idx_rooms_property_id)
+SELECT * FROM rooms WHERE property_id = ANY(:hotel_ids);
+-- Recupera media (usa idx_media_property_id)
+SELECT * FROM media WHERE property_id = ANY(:hotel_ids);
+-- Recupera amenities (usa idx_prop_amenities_link_pid)
+SELECT * FROM property_amenities_link 
+WHERE property_id = ANY(:hotel_ids);
+
+```
+
+Limiti della soluzione: filtri multipli, ricerche geospaziali e ordinamento per rilevanza richiederebbero sistemi più complessi. In produzione sarebbe consigliato un motore dedicato come Elasticsearch o Amazon OpenSearch, con pattern CQRS e sincronizzazione tramite CDC.
+
+Per il progetto si è scelto un approccio semplificato, concentrandosi sull’onboarding e una ricerca base su PostgreSQL.
+Seguendo il principio Infrastructure as Code, l’applicazione dello schema è integrata nel provisioning. Con Terraform, una risorsa null_resource esegue lo script schema.sql appena l’istanza database è pronta:
+
+```hcl
+resource "null_resource" "db_setup" {
+# Riesegue il provisioning solo se cambia lo script SQL
+  triggers = {
+    schema_hash = filemd5("${path.module}/schema.sql")
+  }
+  depends_on = [aws_db_instance.postgres] 
+  provisioner "local-exec" {
+    environment = {
+      PGPASSWORD = aws_db_instance.postgres.password 
+    }
+    # Esegue lo script SQL
+    command = "psql -h localhost -U ${aws_db_instance.postgres.username} -d ${aws_db_instance.postgres.db_name} -f ${path.module}/schema.sql"
+  }
+}
+```
 
 ### **Architettura Cloud**
 

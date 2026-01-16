@@ -55,18 +55,33 @@ CREATE TABLE IF NOT EXISTS rooms (
 -- Gestione foto e file (collegati a proprietà o stanze)
 CREATE TABLE IF NOT EXISTS media (
     id VARCHAR(50) PRIMARY KEY,
-    property_id VARCHAR(50), -- Nullable: può riferirsi solo alla proprietà
-    room_id VARCHAR(50),     -- Nullable: può riferirsi a una stanza specifica
+    property_id VARCHAR(50),
+    room_id VARCHAR(50),
     file_name VARCHAR(255) NOT NULL,
     file_type VARCHAR(50),
-    storage_path VARCHAR(255) NOT NULL, -- Percorso su S3
+    storage_path VARCHAR(255) NOT NULL,
     description TEXT,
     inserted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-    -- Vincoli Chiavi Esterne
-    CONSTRAINT fk_media_property FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE,
-    CONSTRAINT fk_media_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
+    -- Chiavi esterne
+    CONSTRAINT fk_media_property 
+        FOREIGN KEY (property_id) 
+        REFERENCES properties(id) 
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_media_room 
+        FOREIGN KEY (room_id) 
+        REFERENCES rooms(id) 
+        ON DELETE CASCADE,
+
+    -- VINCOLO DI COERENZA LOGICA
+    CONSTRAINT chk_media_owner
+    CHECK (
+        (property_id IS NOT NULL AND room_id IS NULL)
+     OR (property_id IS NULL AND room_id IS NOT NULL)
+    )
 );
+
 
 -- Tabelle AMENITIES (Cataloghi)
 -- Servizi della proprietà (es. Wifi, Piscina)
@@ -168,6 +183,7 @@ CREATE INDEX idx_rooms_property_id ON rooms(property_id);
 -- Come si usa: utilizzato nelle query WHERE property_id = ANY(...)
 -- Cosa migliora: evita full scan della tabella media quando carichiamo le foto/asset di più hotel
 CREATE INDEX idx_media_property_id ON media(property_id);
+CREATE INDEX idx_media_room_id ON media(room_id);
 
 -- Indice B-tree su 'property_id' della tabella property_amenities_link
 -- Tipo: B-tree
