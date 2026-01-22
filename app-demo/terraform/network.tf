@@ -117,6 +117,7 @@ resource "aws_route_table_association" "private_2" {
 }
 
 # Route 53 DNS Zone Privata
+# serve per risolvere nomi interni alla VPC
 resource "aws_route53_zone" "private" {
   name = "myapp.local"
 
@@ -128,6 +129,35 @@ resource "aws_route53_zone" "private" {
     Name = "private-dns-zone"
   }
 }
+
+# serve per far uscire su internet le subnet private, 
+# quindi le ec2 possono per esempio scaricare pacchetti o contattare servizi esterni tipo cognito o s3.
+# risolviamo mettendo un nat gateway nelle subnet pubbliche.
+
+# resource "aws_eip" "nat_eip" {
+#   domain = "vpc"
+  
+#   tags = {
+#     Name = "nat-eip"
+#   }
+# }
+
+# resource "aws_nat_gateway" "nat_gw" {
+#   allocation_id = aws_eip.nat_eip.id
+#   subnet_id     = aws_subnet.public_1.id # Lo mettiamo nella prima subnet pubblica
+
+#   tags = {
+#     Name = "main-nat-gw"
+#   }
+
+#   depends_on = [aws_internet_gateway.gw]
+# }
+
+# resource "aws_route" "private_internet_access" {
+#   route_table_id         = aws_route_table.private.id
+#   destination_cidr_block = "0.0.0.0/0"
+#   nat_gateway_id         = aws_nat_gateway.nat_gw.id
+# }
 
 # test ec2
 # --- AGGIUNTA PER IL DEBUG ---
@@ -210,3 +240,40 @@ cruciali perché verranno "consumati" dai file Terraform successivi: ad esempio,
 avrà bisogno degli ID delle subnet private per sapere dove posizionare le istanze RDS, e il Load Balancer
 avrà bisogno degli ID delle subnet pubbliche per sapere dove mettersi in ascolto.
 */
+
+# dns pubblico per esempio in prod
+
+# resource "aws_route53_zone" "public" {
+#   name = "hotelapp.com"
+# }
+
+# resource "aws_acm_certificate" "cert" {
+#   domain_name       = "hotelapp.com"
+#   validation_method = "DNS"
+# }
+
+# # Il Record per il Frontend (Punta a CloudFront)
+# resource "aws_route53_record" "www" {
+#   zone_id = aws_route53_zone.public.zone_id
+#   name    = "www.hotelapp.com"
+#   type    = "A"
+
+#   alias {
+#     name                   = aws_cloudfront_distribution.s3_distribution.domain_name
+#     zone_id                = aws_cloudfront_distribution.s3_distribution.hosted_zone_id
+#     evaluate_target_health = false
+#   }
+# }
+
+# # Il Record per il Backend (Punta all'API Gateway)
+# resource "aws_route53_record" "api" {
+#   zone_id = aws_route53_zone.public.zone_id
+#   name    = "api.hotelapp.com"
+#   type    = "A"
+
+#   alias {
+#     name                   = aws_apigatewayv2_domain_name.api_domain.domain_name_configuration[0].target_domain_name
+#     zone_id                = aws_apigatewayv2_domain_name.api_domain.domain_name_configuration[0].hosted_zone_id
+#     evaluate_target_health = false
+#   }
+# }

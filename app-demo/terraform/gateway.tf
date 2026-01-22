@@ -97,3 +97,37 @@ output "api_gateway_endpoint" {
 }
 
 
+# da produzione: il gateway è fuori dalla subnet privata in cui si trova elb
+# che dovrebbe contattare. in locale abbiamo messo hardcoded backend:8000 poichè
+# elb con localstack non funziona bene. in prod si dovrebbe usare l'elb dns name
+
+# resource "aws_apigatewayv2_vpc_link" "alb_link" {
+#   name               = "myapp-vpc-link"
+#   security_group_ids = [aws_security_group.alb_sg.id]
+#   subnet_ids         = [aws_subnet.private_1.id, aws_subnet.private_2.id] # O pubbliche, dipende dal setup
+
+#   tags = {
+#     Name = "ALB VPC Link"
+#   }
+# }
+
+# resource "aws_apigatewayv2_integration" "alb_integration" {
+#   api_id           = aws_apigatewayv2_api.main_api.id
+#   integration_type = "HTTP_PROXY"
+  
+#   payload_format_version = "1.0" 
+#   integration_method     = "ANY" 
+  
+#   integration_uri = aws_lb.main_alb.dns_name
+
+#   connection_type = "VPC_LINK"
+#   connection_id   = aws_apigatewayv2_vpc_link.alb_link.id
+
+#   request_parameters = {
+#     "overwrite:path" = "$request.path"
+    
+#     "append:header.x-user-cognito-sub" = "$context.authorizer.claims.sub"
+#     "append:header.x-user-email"       = "$context.authorizer.claims.username"
+#     "append:header.x-user-role"        = "$context.authorizer.claims['cognito:groups']"
+#   }
+# }

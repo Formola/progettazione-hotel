@@ -896,19 +896,99 @@ resource "null_resource" "db_setup" {
 }
 ```
 
-### **Architettura Cloud**
+
+
+### Architettura del Sistema e Cloud Pattern
 
 <center>
-    <img src="./img/arch.png" alt="Architettura Cloud" width="800"/>
+    <img src="./img/architecture_cloud.png" alt="Architettura Cloud" width="800"/>
 </center>
 
-Questa infrastruttura cloud-native è una soluzione multi-tier progettata per massimizzare l'efficienza, separando nettamente la distribuzione dei contenuti statici dalla logica di business dinamica. Tutto inizia con l'utente che contatta il sistema tramite Route 53 DNS, che risolve il dominio e indirizza il traffico, mentre la sicurezza dell'identità è delegata ad AWS Cognito, il quale gestisce login e token di autorizzazione in modo centralizzato.
+A conclusione del capitolo di progettazione, viene presentata l’**architettura fisica di riferimento** per il deployment del sistema, evidenziando i componenti coinvolti, i servizi AWS utilizzati e le modalità con cui l’architettura scala in un **ambiente di produzione reale**.
 
-Per quanto riguarda l'interfaccia utente (Frontend), non utilizziamo server di calcolo (gruppo di ec2 su cui facciamo il deploy dell'app frontend) ma applichiamo il Direct Hosting Pattern. Invece di sprecare risorse computazionali per servire file HTML, CSS e JavaScript, questi asset statici risiedono direttamente in un bucket Amazon S3 configurato per l'hosting web. Davanti a questo storage si posiziona CloudFront, la CDN che distribuisce i contenuti globalmente riducendo la latenza a zero. Questo approccio elimina la necessità di server web tradizionali per il frontend, rendendo questa parte dell'infrastruttura incredibilmente economica e resistente ai picchi di traffico.
+L’architettura disaccoppia nettamente il **livello di presentazione**, la **logica applicativa** e la **persistenza dei dati**, in linea con l’architettura software a strati adottata.
 
-La parte dinamica e computazionale (Backend) entra in gioco quando il browser effettua le chiamate API. Queste richieste vengono accolte da un API Gateway, che agisce come ingresso unificato e sicuro (si occupa anche dell'auth tramite cognito), per poi essere passate a un ELB (Elastic Load Balancer). Qui applichiamo il concetto di scalabilità dinamica: l'ELB distribuisce il carico su un pool di istanze EC2 che ospitano l'application server. Questo layer è governato dal Scale Out Pattern: il servizio di CloudWatch monitora costantemente lo stress delle macchine e, se necessario, ordina all'Auto Scaling di lanciare nuove istanze (da un'immagine AMI pronta) o di terminarle, garantendo potenza di calcolo solo quando serve davvero.
 
-Infine, la persistenza dei dati è architettata seguendo rigorosamente il Web Storage Pattern per ottimizzare le prestazioni e i costi. I dati strutturati e relazionali (utenti, transazioni) vengono salvati su RDS/Aurora PostgreSQL, un database gestito che garantisce integrità e backup automatici. Parallelamente, tutti i file "pesanti" o non strutturati (come le immagini caricate dagli utenti o i media) vengono scaricati su un bucket S3 dedicato (Media Property e Room), sgravando il database principale da un carico inutile e sfruttando lo storage a oggetti per una scalabilità praticamente infinita.
+#### Frontend Layer (CDN & Auth)
+
+L’applicazione frontend, sviluppata come **Single Page Application (SPA)** con **SvelteKit**, non è servita da web server tradizionali, ma distribuita globalmente tramite **Amazon CloudFront (CDN)** e ospitata staticamente su **Amazon S3**.  
+La scelta di un frontend statico rappresenta un **cloud pattern** che verrà analizzato in seguito.
+
+Il componente di autenticazione non è implementato come logica custom, ma delegato a **AWS Cognito**, che gestisce il ciclo di vita delle identità (**User Pool**), l’emissione dei **token JWT** e la sicurezza degli accessi, fungendo da *Authorizer* per le API.
+
+
+
+## Application Layer (Compute & Routing)
+
+Il punto di ingresso del backend è rappresentato da **Amazon API Gateway**, responsabile del routing e della validazione delle richieste.  
+La **logica di business** (backend Python) è eseguita su un cluster di istanze **EC2**, gestite tramite un **Auto Scaling Group**, che adatta dinamicamente il numero di nodi in base al carico, e bilanciate tramite un **Load Balancer (ELB)**.
+
+
+#### Data Layer (Persistence)
+
+La persistenza dei dati strutturati è affidata a **Amazon RDS (PostgreSQL)**.  
+I file binari (media, immagini) sono archiviati in un bucket **Amazon S3** configurato con **accesso privato**.
+
+In un’architettura di produzione, l’accesso ai file da parte del client avviene tramite **Presigned URL**: il backend, dotato dei corretti **permessi IAM**, genera URL temporanei e firmati crittograficamente che autorizzano il frontend a caricare o scaricare risorse direttamente da S3, senza esporre credenziali o rendere pubblico il bucket.
+
+Questa architettura garantisce una completa parità tra ambienti:
+
+- **Sviluppo**: utilizzo di **LocalStack** per emulare S3; gli URL generati puntano all’endpoint locale (*localhost*), consentendo il test completo del flusso offline.
+- **Produzione**: gli URL puntano all’infrastruttura AWS reale, garantendo accesso limitato nel tempo e solo a utenti autenticati. La soluzione con presigned URL è corretta dal punto di vista della sicurezza, ma priva di cache native; in contesti reali è consigliabile valutare l’introduzione di una **CDN dedicata** anche per i media.
+
+
+#### Cloud Design Patterns
+
+I **cloud computing patterns** sono soluzioni architetturali riutilizzabili che affrontano problemi ricorrenti nella progettazione di sistemi cloud.  
+Essi rappresentano una specializzazione dei pattern architetturali tradizionali, adattata ai requisiti non funzionali tipici del cloud. I pattern possono essere **agnostici** rispetto al provider o **vendor-specific**; in questo lavoro vengono analizzati i principali **AWS Cloud Design Patterns** rilevanti per l’architettura proposta.
+
+
+##### Web Storage Pattern
+
+Durante lo sviluppo della **demo app** in ambiente locale con **LocalStack**, si è lavorato direttamente con gli **URL S3** generati localmente e puntanti a *localhost*. In questo contesto, tali URL sono stati salvati nel database nell’entità **Media**, esclusivamente per semplificare sviluppo e testing.
+
+In uno **scenario reale di produzione**, questo approccio risulta **sconsigliato**. Gli URL sono dipendenti dall’ambiente e soggetti a variazioni; inoltre, anche utilizzando URL reali di S3, non dovrebbero essere persistiti nel database.  
+In produzione è sufficiente salvare **attributi di riferimento logico**, come il **nome del bucket** e la **key S3**. La **key S3** rappresenta l’identificatore univoco dell’oggetto nel bucket e può essere vista come un **percorso logico** associato alla risorsa.
+
+Nel flusso corretto, il frontend richiede al backend i dati associati a un’entità; il backend recupera dal database anche la **key del file** e, previa verifica dei **permessi di accesso** (tramite un **ruolo IAM** con privilegi minimi), genera un **presigned URL temporaneo**.  
+L’URL viene restituito al frontend insieme agli altri dati, consentendo la visualizzazione del media e l’utilizzo della **cache del browser**. Poiché i presigned URL hanno una **durata limitata**, in caso di scadenza sarà necessaria una **nuova richiesta** al backend, ad esempio dopo un refresh della pagina.
+
+Il **Web Storage Pattern** affronta il problema della gestione e distribuzione di file di grandi dimensioni, che se serviti direttamente dai server applicativi possono saturare banda e risorse. La soluzione proposta consiste nell’esternalizzare i contenuti statici verso uno storage altamente scalabile come **Amazon S3**, separando la logica applicativa dalla distribuzione dei media.
+
+Nella versione originale del pattern, i file sono considerati **pubblici** e accessibili tramite URL diretti. Nel sistema progettato, invece, i file sono **privati** e l’accesso è mediato dal backend tramite **presigned URL**, garantendo un maggiore livello di sicurezza e controllo, a fronte di un leggero aumento del carico sul backend.
+
+
+##### Scale Out Pattern
+
+Il **Scale Out Pattern** descrive un approccio per gestire aumenti significativi del traffico superando i limiti dello *scaling up*, che prevede l’aumento delle risorse di un singolo server.  
+Lo scaling up è limitato dall’hardware e può risultare inefficiente e costoso.
+
+Il pattern propone di distribuire il carico su più istanze identiche, utilizzando un **Load Balancer**. Servizi come **Elastic Load Balancer**, **CloudWatch** e **Auto Scaling** permettono di aumentare o ridurre automaticamente il numero di istanze in base al carico, garantendo continuità del servizio e ottimizzazione dei costi, pur richiedendo un’attenta configurazione delle regole di autoscaling.
+
+
+
+##### Direct Hosting Pattern
+
+Il **Direct Hosting Pattern** affronta il problema della scalabilità nella distribuzione di contenuti statici. In questo pattern, lo storage cloud (ad esempio **Amazon S3**) viene utilizzato per ospitare non solo media, ma anche **HTML, CSS e JavaScript**.
+
+Poiché lo storage Internet è progettato per essere altamente disponibile e scalabile, i contenuti statici vengono caricati in un bucket configurato per l’hosting statico, riducendo drasticamente il carico sui server applicativi. Questo approccio non è adatto a contenuti dinamici lato server, ma risulta ideale per frontend e applicazioni web statiche.
+
+Nel contesto del progetto, il Direct Hosting Pattern è stato applicato all’intero frontend. L’applicazione **SvelteKit** è stata configurata per la **compilazione statica** (*adapter-static*), trasformando l’interfaccia in file statici che non richiedono elaborazione lato server.
+
+Sebbene SvelteKit supporti il **Server-Side Rendering (SSR)**, l’adozione di SSR avrebbe introdotto complessità infrastrutturali non giustificate dai requisiti, come la gestione di server Node.js, autoscaling dedicato e una maggiore **superficie di attacco**.  
+
+Di conseguenza, è stata scelta una strategia di **Static Export (Client-Side Rendering)**.
+
+La catena di distribuzione finale è composta da:
+
+- **Amazon S3 (Storage)**: ospita i file statici come *Origin*, con bucket privato.
+- **Amazon CloudFront (Distribution & Caching)**: CDN che fornisce caching globale, riduce la latenza, gestisce SSL/TLS e supporta il routing tipico delle SPA.
+- **Amazon Route 53 (DNS Management)**: gestisce la risoluzione dei nomi di dominio tramite record *Alias* verso CloudFront, garantendo alta disponibilità e scalabilità.
+
+In questo pattern, il lavoro di rendering e gestione dello stato viene spostato dal server al browser.  
+L’infrastruttura backend non deve più **elaborare** richieste di rendering, ma solo **distribuire** file, consentendo di sostituire server di calcolo con servizi gestiti come S3 e CloudFront. Il trade-off accettato è la rinuncia al pre-rendering dinamico, in cambio di un’infrastruttura **serverless**, altamente scalabile e con costi di gestione minimi.
+
+
 
 https://en.clouddesignpattern.org/index.php/CDP_Web_Storage_Pattern.html
 
@@ -960,8 +1040,7 @@ PERSISTENCE=1 in docker-compose.yml permette di salvare i dati in un volume. In 
 
 **NOTA**: la persistenza non riguarda i container con le ec2, se si spegne docker e si riavvia localstack, con la persistenza si salva solo lo state della ec2 (LocalStack ricarica solo i record EC2 (ID istanza, stato, metadati) dai file di stato), ma è fake perchè i container non ripartono.
 
-**Please note that this VM manager does not fully support persistence. While the records of resources will be persisted, the instances or AMIs themselves (i.e. Docker containers and Docker images) will not be persisted.
-**
+**Please note that this VM manager does not fully support persistence. While the records of resources will be persisted, the instances or AMIs themselves (i.e. Docker containers and Docker images) will not be persisted.**
 
 #### Localstack EC2
 
@@ -1004,12 +1083,4 @@ finire flow principale demo app
 prova ansible ec2, carico app in ec2 con ansible. magari lo menzionaimo come sviluppo futuro.
 kubernetes al massimo menzioniamo solo ma non lo usiamo.
 design uml non per forza da scrivere preciso nelle due app.
-
-
-
-![class Diagram](./plantuml/design/class_design.puml)
-
-
-![img](./img/class_diagram_final.png)
-
 
