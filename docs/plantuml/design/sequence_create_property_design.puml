@@ -1,0 +1,112 @@
+@startuml sequence_design_create_property_refined
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 200
+skinparam ParticipantPadding 10
+
+participant "PropertyApi\n(Frontend)" as Client
+participant "PropertiesRouter\n(FastAPI)" as Router
+participant "PropertyService" as Service
+participant "AmenityFactory" as Factory
+participant "AmenityRepo" as AmRepo
+participant "MediaRepo" as MedRepo
+participant "PropertyRepo" as PropRepo
+database "RDS\PostgreSQL" as DB
+
+activate Client
+
+' --- REQUEST ---
+Client -> Router: POST /api/properties/ \n create_property(data)
+activate Router
+
+' Auth Check
+Router -> Router: get_current_user_from_header()
+
+Router -> Service: create_property(data, owner)
+activate Service
+
+    ' --- 1. PREPARE AMENITIES ---
+    loop for each amenity in data
+        alt is new amenity (custom)?
+            Service -> Factory: create_amenity(name, category...)
+            activate Factory
+            Factory --> Service: newEntity
+            deactivate Factory
+            
+            Service -> AmRepo: save(newEntity)
+            activate AmRepo
+            AmRepo -> DB: INSERT INTO property_amenities...
+            activate DB
+            DB --> AmRepo: success
+            deactivate DB
+            AmRepo --> Service: savedEntity
+            deactivate AmRepo
+            
+        else is existing amenity?
+            Service -> Factory: create_amenity(id)
+            activate Factory
+            Factory --> Service: stubEntity
+            deactivate Factory
+        end
+    end
+
+    ' --- 2. PREPARE MEDIA ---
+    loop for each media_id
+        Service -> MedRepo: get_by_id(media_id)
+        activate MedRepo
+        MedRepo --> Service: mediaEntity
+        deactivate MedRepo
+    end
+
+    ' --- 3. CREATE PROPERTY ENTITY ---
+    Service -> Service: new_property = Property(..., amenities, media)
+
+    ' --- 4. PERSISTENCE ---
+    Service -> PropRepo: save(new_property)
+    activate PropRepo
+        
+        ' Check if exists
+        PropRepo -> DB: SELECT id FROM properties WHERE id = ...
+        activate DB
+        DB --> PropRepo: model_result
+        deactivate DB
+
+        alt model_result is null (INSERT Strategy)
+            PropRepo -> PropRepo: map Entity to New Model
+            PropRepo -> DB: session.add(new_model)
+        else model_result exists (UPDATE Strategy)
+            PropRepo -> PropRepo: update model fields
+        end
+
+        ' COMMIT triggers the actual SQL
+        PropRepo -> DB: COMMIT
+        activate DB
+        
+        group SQL Transactions
+            PropRepo -> DB: INSERT INTO properties ...
+            PropRepo -> DB: INSERT INTO property_amenities_link ...
+        end
+        
+        DB --> PropRepo: success
+        deactivate DB
+        
+        PropRepo --> Service: savedEntity
+    deactivate PropRepo
+
+    Service --> Router: savedEntity
+    deactivate Service
+
+Router --> Client: 201 Created (returns PropertyData with ID)
+deactivate Router
+
+' --- 5. PHASE 2: MEDIA UPLOAD ---
+group Phase 2: Upload Media Files (Frontend Loop)
+    note right of Client
+        After receiving the new Property ID, 
+        the Frontend iterates over selected files 
+        and calls POST /api/media/ for each one.
+    end note
+    deactivate Client
+end
+
+@enduml

@@ -1,0 +1,158 @@
+@startuml sequence_design_edit_scenario_nested
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 200
+skinparam ParticipantPadding 10
+
+participant "Frontend" as Client
+participant "FastAPI\nRouter" as Router
+participant "Property\nService" as PropService
+participant "Room\nService" as RoomService
+participant "Media\nService" as MediaService
+participant "PropertyRepo" as PropRepo
+participant "RoomRepo" as RoomRepo
+participant "MediaRepo" as MediaRepo
+participant "S3MediaStorage" as S3Storage
+database "RDS\PostgreSQL" as DB
+database "S3 Bucket" as S3
+
+activate Client
+
+' ============================================================
+' MAIN SCENARIO: EDIT PROPERTY PAGE
+' ============================================================
+group User Scenario: Edit Property Page
+
+    ' ------------------------------------------------------------
+    ' ACTION A: UPDATE PROPERTY DETAILS
+    ' ------------------------------------------------------------
+    Client -> Router: PUT /api/properties/{id}
+    activate Router
+    
+    Router -> PropService: update_property(id, data, owner)
+    activate PropService
+    
+    ' Load
+    PropService -> PropRepo: get_by_id(id)
+    activate PropRepo
+        PropRepo -> DB: SELECT properties...
+        activate DB
+        DB --> PropRepo: model
+        deactivate DB
+        PropRepo --> PropService: entity
+    deactivate PropRepo
+    
+    ' Logic
+    PropService -> PropService: update_fields(data)
+    note right: Updates metadata (name, desc)\nSyncs Amenities (creates/links)
+
+
+    ' Persist
+    PropService -> PropRepo: save(entity)
+    activate PropRepo
+        PropRepo -> DB: COMMIT Transaction
+        activate DB
+
+        DB --> PropRepo: success
+        deactivate DB
+        
+        PropRepo --> PropService: updatedEntity
+    deactivate PropRepo
+
+    PropService --> Router: updatedEntity
+    deactivate PropService
+    
+    Router --> Client: 200 OK
+    deactivate Router
+
+    ' Note regarding Property Media
+    note right of Client
+        Frontend manages Property Media (Upload/Delete)
+        via separate async calls to MediaAPI
+        (omitted here for brevity)
+    end note
+
+    ' ------------------------------------------------------------
+    ' ACTION B: ADD NEW ROOM
+    ' ------------------------------------------------------------
+    group Add New Room Flow
+        ' 1. Create Metadata
+        Client -> Router: POST /api/properties/{id}/rooms
+        activate Router
+        
+        Router -> RoomService: add_room(prop_id, room_data, owner)
+        activate RoomService
+        
+        ' Security Check (using Parent Repo)
+        RoomService -> PropRepo: get_by_id(prop_id)
+        activate PropRepo
+            PropRepo -> DB: SELECT properties...
+            activate DB
+            DB --> PropRepo: propertyModel
+            deactivate DB
+            PropRepo --> RoomService: propertyEntity
+        deactivate PropRepo
+        
+        ' Logic & Domain Check
+        RoomService -> RoomService: new Room(amenities...)
+        
+        ' Persist Room
+        RoomService -> RoomRepo: save(newRoom)
+        activate RoomRepo
+            RoomRepo -> DB: COMMIT Transaction
+            activate DB
+            group SQL Transactions
+                RoomRepo -> DB: INSERT INTO rooms ...
+                RoomRepo -> DB: INSERT INTO room_amenities_link ...
+            end
+            DB --> RoomRepo: success
+            deactivate DB
+            RoomRepo --> RoomService: savedRoom (id="room_99")
+        deactivate RoomRepo
+
+        RoomService --> Router: savedRoom
+        deactivate RoomService
+        
+        Router --> Client: 201 Created (id="room_99")
+        deactivate Router
+
+        ' 2. Upload Room Media
+        loop for each file in room_photos
+            Client -> Router: POST /api/media/\n(file, room_id="room_99")
+            activate Router
+            
+            Router -> MediaService: upload_media(file, room_id)
+            activate MediaService
+            
+            ' Physical Upload
+            MediaService -> S3Storage: store_media(bytes)
+            activate S3Storage
+                S3Storage -> S3: PUT Object
+                activate S3
+                S3 --> S3Storage: 200 OK
+                deactivate S3
+                S3Storage --> MediaService: url
+            deactivate S3Storage
+            
+            ' DB Metadata
+            MediaService -> MediaRepo: save(mediaEntity)
+            activate MediaRepo
+                MediaRepo -> DB: INSERT INTO media (path, room_id...)
+                activate DB
+                MediaRepo -> DB: COMMIT
+                DB --> MediaRepo: success
+                deactivate DB
+                MediaRepo --> MediaService: savedMedia
+            deactivate MediaRepo
+            
+            MediaService --> Router: MediaData
+            deactivate MediaService
+            
+            Router --> Client: 201 Created
+            deactivate Router
+        end
+    end
+end
+
+deactivate Client
+@enduml
