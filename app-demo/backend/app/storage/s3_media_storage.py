@@ -2,6 +2,7 @@ import boto3
 from botocore.exceptions import ClientError
 from app.config import settings
 from app.storage.media_storage_interface import IMediaStorage
+from uuid import uuid4
 
 class S3MediaStorage(IMediaStorage):
     def __init__(self):
@@ -17,21 +18,23 @@ class S3MediaStorage(IMediaStorage):
 
     def store_media(self, file_name: str, file_data: bytes, content_type: str) -> str:
         try:
+            # Generate a unique folder ID (you may use uuid or another method)
+            folder_id = str(uuid4())
+            key = f"{folder_id}/{file_name}"
+            
             self.s3_client.put_object(
                 Bucket=self.bucket_name,
-                Key=file_name,
+                Key=key,
                 Body=file_data,
                 ContentType=content_type
-                # ACL='public-read' (Opzionale, dipende dalle policy del bucket)
             )
             
             # Costruzione URL
             if settings.AWS_ENDPOINT_URL:
-                # URL stile LocalStack: http://localstack:4566/bucket/key
-                return f"{settings.AWS_ENDPOINT_URL}/{self.bucket_name}/{file_name}"
+                return f"{settings.AWS_ENDPOINT_URL}/{self.bucket_name}/{key}"
             else:
-                # URL stile AWS Production: https://bucket.s3.region.amazonaws.com/key
-                return f"https://{self.bucket_name}.s3.{settings.AWS_REGION}.amazonaws.com/{file_name}"
+                return f"https://{self.bucket_name}.s3.{settings.AWS_REGION}.amazonaws.com/{key}"
+
 
         except ClientError as e:
             print(f"S3 Upload Error: {e}")
