@@ -100,7 +100,7 @@ PropertyOwner "1" -down-> "*" Property : manages
 Property "1" *-down- "*" Room : contains 
 
 ' Customer visualizza (da destra o sinistra non importa, ma usiamo dotted)
-Customer .down.> "*" Property : views 
+User .down.> "*" Property : views 
     
 ' Media sempre a DESTRA
 Property "1" o-right- "*" Media : has gallery 
@@ -114,5 +114,7 @@ Room "1" o-left- "*" RoomAmenity : equipped with
 ' Questo forza User sopra Property, e Property sopra Room
 User -[hidden]down-> Property
 Property -[hidden]down-> Room
+Customer -[hidden]left-> User
+PropertyOwner -[hidden]down-> Property
 
 @enduml

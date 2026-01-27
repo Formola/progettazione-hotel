@@ -1,14 +1,33 @@
 @startuml usecase_diagram
-top to bottom direction
+!define ICONURL https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/v2.4.0
 skinparam packageStyle rectangle
+left to right direction
+skinparam dpi 150
+skinparam defaultFontSize 9
+skinparam defaultFontName Arial
+
 skinparam usecase {
     BackgroundColor White
-    BorderColor Black
-    ArrowColor Black
+    BorderColor #333333
+    ArrowColor #666666
+    FontSize 8
     Shadowing false
 }
 
-' 1. ACTORS
+skinparam package {
+    BackgroundColor #F8F9FA
+    BorderColor #333333
+    FontSize 9
+    FontStyle bold
+}
+
+skinparam actor {
+    BackgroundColor White
+    BorderColor #333333
+    FontSize 8
+}
+
+' ACTORS - Compatti
 actor "Guest" as Guest
 actor "Auth User" as AuthUser
 actor "Owner" as Owner
@@ -18,146 +37,107 @@ Guest <|-- AuthUser
 AuthUser <|-- Owner
 AuthUser <|-- Booker
 
-' 2. LEFT COLUMN
+' PACKAGES ORGANIZZATI IN MODO COMPATTO
 
 package "Authentication" as PkgAuth {
-    (Sign Up)
-    (Login)
-    (Logout)
-    (Sign Up) -[hidden]down-> (Login)
-    (Login) -[hidden]down-> (Logout)
+    usecase "Sign Up" as SignUp
+    usecase "Login" as Login
+    usecase "Logout" as Logout
 }
 
 package "Property Search" as PkgSearch {
-    (Search Property)
-    (View Property Details)
-    (Filter Results)
-    (Search Property) -[hidden]down-> (View Property Details)
-    (View Property Details) -[hidden]down-> (Filter Results)
+    usecase "Search Property" as SearchProp
+    usecase "View Property Details" as ViewDetails
+    usecase "Filter Results" as Filter
 }
 
-' QUESTI ORA SONO A SINISTRA (SOTTO SEARCH)
-package "Media Management" as PkgMedia {
-    (Manage Media) as ManageMedia
-    (Upload Media)
-    (Delete Media)
+package "Property Management" as PkgProp {
+    usecase "Access Owner Dashboard" as Dashboard
+    usecase "Create New Property" as CreateProp
+    usecase "Edit Property" as EditProp
+    usecase "Delete Property" as DeleteProp
+    usecase "Manage Property Content" as MngPropCont
+    usecase "Add/Edit Basic Details" as BasicDetails
 }
 
 package "Room Management" as PkgRoom {
-    (Manage Rooms)
-    (Add Room)
-    (Edit Room)
-    (Delete Room)
-    (Manage Room Content) as MngRoomCont
-    (Add/Edit Basic Room Details) as BasicRoomDetails
-}
-
-' 3. RIGHT COLUMN
-
-package "Property Management" as PkgProp {
-    (Access Owner Dashboard) as Dashboard
-    (Create New Property) as CreateProp
-    (Edit Property) as EditProp
-    (Delete Property)
-    (Manage Property Content) as MngPropCont
-    (Add/Edit Basic Details) as BasicDetails
-    
-    Dashboard -[hidden]down-> CreateProp
-    CreateProp -[hidden]down-> EditProp
+    usecase "Manage Rooms" as ManageRooms
+    usecase "Add Room" as AddRoom
+    usecase "Edit Room" as EditRoom
+    usecase "Delete Room" as DeleteRoom
+    usecase "Manage Room Content" as MngRoomCont
+    usecase "Add/Edit Basic Room Details" as BasicRoomDetails
 }
 
 package "Amenities Management" as PkgAmen {
-    rectangle "Property Amenities" {
-        (Manage Property Amenities) as ManagePropAm
-        (Add Property Amenity) as AddPropAm
-        (Delete Property Amenity) as DelPropAm
-        (Add Custom Property Amenity) as CustPropAm
-        ManagePropAm -[hidden]down-> AddPropAm
-        AddPropAm -[hidden]down-> DelPropAm
-        DelPropAm -[hidden]down-> CustPropAm
-    }
-    
-    rectangle "Room Amenities" {
-        (Manage Room Amenities) as ManageRoomAm
-        (Add Room Amenity) as AddRoomAm
-        (Delete Room Amenity) as DelRoomAm
-        (Add Custom Room Amenity) as CustRoomAm
-        ManageRoomAm -[hidden]down-> AddRoomAm
-        AddRoomAm -[hidden]down-> DelRoomAm
-        DelRoomAm -[hidden]down-> CustRoomAm
-    }
+    usecase "Manage Property Amenities" as ManagePropAm
+    usecase "Add Property Amenity" as AddPropAm
+    usecase "Delete Property Amenity" as DelPropAm
+    usecase "Add Custom Property Amenity" as CustPropAm
+    usecase "Manage Room Amenities" as ManageRoomAm
+    usecase "Add Room Amenity" as AddRoomAm
+    usecase "Delete Room Amenity" as DelRoomAm
+    usecase "Add Custom Room Amenity" as CustRoomAm
 }
 
-' 4. LAYOUT GRID
+package "Media Management" as PkgMedia {
+    usecase "Manage Media" as ManageMedia
+    usecase "Upload Media" as UploadMedia
+    usecase "Delete Media" as DeleteMedia
+}
 
-' Colonna Sinistra: Auth -> Search
+' LAYOUT HINTS per organizzazione compatta
+PkgAuth -[hidden]right-> PkgProp
+PkgProp -[hidden]right-> PkgAmen
+PkgSearch -[hidden]right-> PkgRoom
+PkgRoom -[hidden]right-> PkgMedia
+
 PkgAuth -[hidden]down-> PkgSearch
 
+' RELATIONS
 
-PkgSearch -[hidden]down---> PkgRoom 
+' Auth
+Guest --> SignUp
+Guest --> Login
+AuthUser --> Logout
 
-' Room sotto Media
-PkgMedia -[hidden]up-> PkgProp
+' Search
+Guest --> SearchProp
+SearchProp <.. ViewDetails : <<extend>>
+Filter ..> SearchProp : <<extend>>
 
-
-' Colonna Destra: Property a destra di Auth/Search
-PkgAuth -[hidden]right-> PkgProp
-
-' Amenities a destra di Property
-PkgProp -[hidden]right-> PkgAmen
-
-' 5. RELATIONS
-
-' --- Auth ---
-Guest --> (Sign Up)
-Guest --> (Login)
-AuthUser --> (Logout)
-
-' --- Search ---
-Guest --> (Search Property)
-'extend per View Details
-(Search Property) <.. (View Property Details) : <<extend>>
-(Filter Results) ..> (Search Property) : <<extend>>
-
-' --- Property Flow ---
+' Property Management
 Owner --> Dashboard
 Dashboard <.. CreateProp : <<extend>>
 Dashboard <.. EditProp : <<extend>>
-Dashboard <.. (Delete Property) : <<extend>>
+Dashboard <.. DeleteProp : <<extend>>
 CreateProp <.. MngPropCont : <<extend>>
 EditProp <.. MngPropCont : <<extend>>
 BasicDetails <.. MngPropCont : <<include>>
 
-' --- Media Connections ---
-' Le frecce andranno da Destra (Prop) a Sinistra (Media)
-MngPropCont ..> ManageMedia : <<include>>
-MngRoomCont ..> ManageMedia : <<include>>
-
-' Logic Media con extend
-ManageMedia <.. (Upload Media) : <<extend>>
-ManageMedia <.. (Delete Media) : <<extend>>
-
-' --- Room Flow ---
-' Le frecce andranno da Destra (Prop) a Sinistra (Room)
-EditProp <.. (Manage Rooms) : <<extend>>
-(Manage Rooms) <.. (Add Room) : <<extend>>
-(Manage Rooms) <.. (Edit Room) : <<extend>>
-(Manage Rooms) <.. (Delete Room) : <<extend>>
-(Add Room) <.. MngRoomCont : <<extend>>
-(Edit Room) <.. MngRoomCont : <<extend>>
+' Room Management
+EditProp <.. ManageRooms : <<extend>>
+ManageRooms <.. AddRoom : <<extend>>
+ManageRooms <.. EditRoom : <<extend>>
+ManageRooms <.. DeleteRoom : <<extend>>
+AddRoom <.. MngRoomCont : <<extend>>
+EditRoom <.. MngRoomCont : <<extend>>
 BasicRoomDetails <.. MngRoomCont : <<include>>
 
-' --- Amenities Connections ---
+' Amenities
 MngPropCont ..> ManagePropAm : <<include>>
 MngRoomCont ..> ManageRoomAm : <<include>>
-
-' Logic Amenities
 ManagePropAm <.. AddPropAm : <<extend>>
 ManagePropAm <.. DelPropAm : <<extend>>
 AddPropAm <.. CustPropAm : <<extend>>
-
 ManageRoomAm <.. AddRoomAm : <<extend>>
 ManageRoomAm <.. DelRoomAm : <<extend>>
 AddRoomAm <.. CustRoomAm : <<extend>>
+
+' Media
+MngPropCont ..> ManageMedia : <<include>>
+MngRoomCont ..> ManageMedia : <<include>>
+ManageMedia <.. UploadMedia : <<extend>>
+ManageMedia <.. DeleteMedia : <<extend>>
 
 @enduml

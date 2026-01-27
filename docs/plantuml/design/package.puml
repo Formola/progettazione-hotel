@@ -1,5 +1,4 @@
 @startuml PackageDiagramOptimized
-skinparam packageStyle rectangle
 left to right direction
 
 ' --- PRESENTATION ---
@@ -24,12 +23,28 @@ package "Service" {
 package "Domain" {
 
   package "Entities" {
+    class User
     class Property
     class Room
     class Media
     interface IAmenity
     class RoomAmenity
     class PropertyAmenity
+  }
+
+  package "Repositories" {
+    interface IPropertyRepository
+    interface IRoomRepository
+    interface IMediaRepository
+    interface IUserRepository
+    interface ISearchRepository
+    abstract AmenityRepository
+  }
+
+
+  package "Adapters" {
+    interface IMediaStorage
+    interface IAuthProvider
   }
 
 
@@ -42,37 +57,38 @@ package "RepositoryInfra" {
     class PropertyRepositoryImpl
     class RoomRepositoryImpl
     class MediaRepositoryImpl
-    interface IPropertyRepository
-    interface IRoomRepository
-    interface IMediaRepository
+    class UserRepositoryImpl
+    class SearchRepositoryImpl
+    class PropertyAmenityRepository
+    class RoomAmenityRepository
   }
+
   package "Adapters" {
     class S3MediaStorage
     class AWSCognitoAuthProvider
-    interface IMediaStorage
 
-    class AWSCognitoAuthProvider
-    interface IAuthProvider
+  }
 
+  package "Factories" {
+    abstract AmenityFactory
+    class PropertyAmenityFactory
+    class RoomAmenityFactory
   }
 
 
 }
 
-"Presentation" ..> "Service"
-"Service" ..> "Domain"
-"Service" ..> "RepositoryInfra"
-
-
-IPropertyRepository <|.. PropertyRepositoryImpl
-IRoomRepository <|.. RoomRepositoryImpl
-IMediaRepository <|.. MediaRepositoryImpl
-IMediaStorage <|.. S3MediaStorage
-IAuthProvider <|.. AWSCognitoAuthProvider
+' "Presentation" ..> "Service"
+' "Service" ..> "RepositoryInfra"
+' "Service" ..> "Domain"
+' "RepositoryInfra" ..> "Domain"
 
 'iamenity
 IAmenity <|.. RoomAmenity
 IAmenity <|.. PropertyAmenity
+
+AmenityFactory <|.. PropertyAmenityFactory
+AmenityFactory <|.. RoomAmenityFactory
 
 
 
