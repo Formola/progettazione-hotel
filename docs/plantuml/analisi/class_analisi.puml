@@ -103,8 +103,8 @@ Property "1" *-down- "*" Room : contains
 User .down.> "*" Property : views 
     
 ' Media sempre a DESTRA
-Property "1" o-right- "*" Media : has gallery 
-Room "1" o-right- "*" Media : has gallery 
+Property "1" *-right- "*" Media : has gallery 
+Room "1" *-right- "*" Media : has gallery 
 
 ' Amenities sempre a SINISTRA
 Property "1" o-left- "*" PropertyAmenity : offers 
@@ -116,5 +116,12 @@ User -[hidden]down-> Property
 Property -[hidden]down-> Room
 Customer -[hidden]left-> User
 PropertyOwner -[hidden]down-> Property
+
+' NOTA ESPLICATIVA SUL COMPORTAMENTO IBRIDO
+note top of IAmenity
+  - <i>Global Amenities</i> are shared (Aggregation).
+  - <i>Custom Amenities</i> are bound to the 
+    entity's lifecycle (Cascading Delete).
+end note
 
 @enduml
