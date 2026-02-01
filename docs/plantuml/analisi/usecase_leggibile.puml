@@ -1,0 +1,114 @@
+@startuml usecase_diagram
+skinparam packageStyle rectangle
+left to right direction
+skinparam dpi 150
+skinparam defaultFontSize 8
+skinparam defaultFontName Arial
+
+skinparam usecase {
+    BackgroundColor White
+    BorderColor #333333
+    ArrowColor #666666
+    FontSize 7
+    Shadowing false
+}
+
+skinparam package {
+    BackgroundColor #F8F9FA
+    BorderColor #333333
+    FontSize 8
+    FontStyle bold
+}
+
+skinparam actor {
+    BackgroundColor White
+    BorderColor #333333
+    FontSize 7
+}
+
+' ================= ACTORS =================
+actor "Guest" as Guest
+actor "Auth User" as AuthUser
+actor "Owner" as Owner
+actor "Booker" as Booker
+
+Guest <|-- AuthUser
+AuthUser <|-- Owner
+AuthUser <|-- Booker
+
+' ================= PACKAGES =================
+
+package "Authentication" as Auth {
+    usecase "Sign Up" as SignUp
+    usecase "Login" as Login
+}
+
+package "Property Search" as Search {
+    usecase "Search Property" as SearchProp
+    usecase "View Property Details" as ViewDetails
+}
+
+package "Management" as Management {
+
+    ' Forziamo layout verticale solo dentro Management
+   
+
+        package "Property Management" as Prop {
+            usecase "Access Owner Dashboard" as Dashboard
+            usecase "Manage Property Content" as MngPropCont
+            usecase "Create New Property" as CreateProp
+        }
+
+        package "Room Management" as Room {
+            usecase "Manage Rooms" as ManageRooms
+            usecase "Manage Room Content" as MngRoomCont
+        }
+
+        package "Amenities Management" as Amen {
+            usecase "Manage Property Amenities" as ManagePropAm
+            usecase "Manage Room Amenities" as ManageRoomAm
+        }
+
+        package "Media Management" as Media {
+            usecase "Manage Media" as ManageMedia
+        }
+    
+}
+
+' ================= LAYOUT =================
+Auth -[hidden]right-> Management
+Search -[hidden]right-> Prop
+Auth -[hidden]down-> Search
+
+' ================= RELATIONS =================
+
+' Auth
+Guest --> SignUp
+Guest --> Login
+
+' Search
+Guest --> SearchProp
+SearchProp <.. ViewDetails : <<extend>>
+
+' Property
+Owner --> Dashboard
+Dashboard <.. CreateProp : <<extend>>
+Dashboard ..> MngPropCont : <<include>>
+
+MngPropCont ..> ManageRooms : <<include>>
+MngPropCont ..> ManagePropAm : <<include>>
+MngPropCont ..> ManageMedia : <<include>>
+
+' Rooms
+ManageRooms ..> MngRoomCont : <<include>>
+MngRoomCont ..> ManageRoomAm : <<include>>
+MngRoomCont ..> ManageMedia : <<include>>
+
+
+
+'hidden
+Prop -[hidden]up->Room
+Media -[hidden]down->Room
+Amen -[hidden]down->Prop
+
+@enduml
