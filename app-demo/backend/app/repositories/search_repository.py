@@ -105,7 +105,7 @@ class SearchRepository:
                     JOIN room_amenities_link l ON a.id = l.amenity_id
                     WHERE l.room_id = ANY(:room_ids)
                 """
-            r_amenities = self.db.execute(text(sql_r_amenities), {"room_ids": room_ids}).mappings().all()
+                r_amenities = self.db.execute(text(sql_r_amenities), {"room_ids": room_ids}).mappings().all()
             # -----------------------------
             # Data Assembly (Manual Mapping)
             # -----------------------------
